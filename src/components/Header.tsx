@@ -1,16 +1,31 @@
 import React, { useState } from 'react'
-import { Search, ShoppingBag, Heart, User, Menu, X } from 'lucide-react'
+import { Search, ShoppingBag, Heart, User, Menu, X, LogOut } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
+import { signOut, User as UserType } from '../lib/auth'
 
 interface HeaderProps {
   onSearchToggle: () => void
   onCartToggle: () => void
+  onAuthToggle: () => void
   cartItemsCount: number
+  user: UserType | null
+  onSignOut: () => void
 }
 
-const Header = ({ onSearchToggle, onCartToggle, cartItemsCount }: HeaderProps) => {
+const Header = ({ onSearchToggle, onCartToggle, onAuthToggle, cartItemsCount, user, onSignOut }: HeaderProps) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
+  const [showUserMenu, setShowUserMenu] = useState(false)
   const navigate = useNavigate()
+
+  const handleSignOut = async () => {
+    try {
+      await signOut()
+      onSignOut()
+      setShowUserMenu(false)
+    } catch (error) {
+      console.error('Error signing out:', error)
+    }
+  }
 
   return (
     <header className="bg-white shadow-sm sticky top-0 z-50">
@@ -36,12 +51,6 @@ const Header = ({ onSearchToggle, onCartToggle, cartItemsCount }: HeaderProps) =
               className="text-gray-700 hover:text-primary-600 font-medium transition-colors"
             >
               Products
-            </button>
-            <button 
-              onClick={() => navigate('/admin')}
-              className="text-gray-700 hover:text-primary-600 font-medium transition-colors"
-            >
-              Admin
             </button>
           </nav>
 
@@ -80,9 +89,32 @@ const Header = ({ onSearchToggle, onCartToggle, cartItemsCount }: HeaderProps) =
                 </span>
               )}
             </button>
-            <button className="p-2 text-gray-700 hover:text-primary-600 transition-colors">
-              <User className="w-5 h-5" />
-            </button>
+            
+            {/* User Menu */}
+            <div className="relative">
+              <button 
+                className="p-2 text-gray-700 hover:text-primary-600 transition-colors"
+                onClick={() => user ? setShowUserMenu(!showUserMenu) : onAuthToggle()}
+              >
+                <User className="w-5 h-5" />
+              </button>
+              
+              {user && showUserMenu && (
+                <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-2">
+                  <div className="px-4 py-2 border-b border-gray-200">
+                    <p className="text-sm font-medium text-gray-900">{user.full_name}</p>
+                    <p className="text-xs text-gray-500">{user.email}</p>
+                  </div>
+                  <button
+                    onClick={handleSignOut}
+                    className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"
+                  >
+                    <LogOut className="w-4 h-4 mr-2" />
+                    Sign Out
+                  </button>
+                </div>
+              )}
+            </div>
             
             {/* Mobile menu button */}
             <button
@@ -110,12 +142,6 @@ const Header = ({ onSearchToggle, onCartToggle, cartItemsCount }: HeaderProps) =
                   className="text-gray-700 hover:text-primary-600 font-medium py-2 text-left"
                 >
                   Products
-                </button>
-                <button 
-                  onClick={() => { navigate('/admin'); setIsMenuOpen(false); }}
-                  className="text-gray-700 hover:text-primary-600 font-medium py-2 text-left"
-                >
-                  Admin
                 </button>
               </nav>
             </div>

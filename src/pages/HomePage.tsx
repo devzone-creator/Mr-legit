@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import Header from '../components/Header'
 import Hero from '../components/Hero'
 import Categories from '../components/Categories'
@@ -7,7 +7,9 @@ import Newsletter from '../components/Newsletter'
 import Footer from '../components/Footer'
 import SearchModal from '../components/SearchModal'
 import CartSidebar from '../components/CartSidebar'
-import PaymentModal from '../components/PaymentModal'
+import AuthModal from '../components/AuthModal'
+import CheckoutModal from '../components/CheckoutModal'
+import { getCurrentUser, User } from '../lib/auth'
 
 interface Product {
   id: string
@@ -37,8 +39,24 @@ interface CartItem {
 const HomePage = () => {
   const [isSearchOpen, setIsSearchOpen] = useState(false)
   const [isCartOpen, setIsCartOpen] = useState(false)
-  const [isPaymentOpen, setIsPaymentOpen] = useState(false)
+  const [isAuthOpen, setIsAuthOpen] = useState(false)
+  const [isCheckoutOpen, setIsCheckoutOpen] = useState(false)
+  const [authMode, setAuthMode] = useState<'signin' | 'signup'>('signin')
   const [cartItems, setCartItems] = useState<CartItem[]>([])
+  const [user, setUser] = useState<User | null>(null)
+
+  useEffect(() => {
+    loadUser()
+  }, [])
+
+  const loadUser = async () => {
+    try {
+      const currentUser = await getCurrentUser()
+      setUser(currentUser)
+    } catch (error) {
+      console.error('Error loading user:', error)
+    }
+  }
 
   const handleAddToCart = (product: Product, selectedColor?: string, selectedSize?: string) => {
     const existingItem = cartItems.find(
@@ -80,21 +98,26 @@ const HomePage = () => {
   }
 
   const handleCheckout = () => {
+    if (!user) {
+      setIsCartOpen(false)
+      setAuthMode('signin')
+      setIsAuthOpen(true)
+      return
+    }
     setIsCartOpen(false)
-    setIsPaymentOpen(true)
+    setIsCheckoutOpen(true)
   }
 
-  const handlePaymentSuccess = () => {
+  const handleOrderSuccess = () => {
     setCartItems([])
-    alert('Payment successful! Your order has been placed.')
+  }
+
+  const handleAuthSuccess = () => {
+    loadUser()
   }
 
   const getTotalCartItems = () => {
     return cartItems.reduce((total, item) => total + item.quantity, 0)
-  }
-
-  const getTotalAmount = () => {
-    return cartItems.reduce((total, item) => total + (item.price * item.quantity), 0)
   }
 
   return (
@@ -102,7 +125,10 @@ const HomePage = () => {
       <Header 
         onSearchToggle={() => setIsSearchOpen(true)}
         onCartToggle={() => setIsCartOpen(true)}
+        onAuthToggle={() => setIsAuthOpen(true)}
         cartItemsCount={getTotalCartItems()}
+        user={user}
+        onSignOut={loadUser}
       />
       <Hero />
       <Categories />
@@ -124,11 +150,19 @@ const HomePage = () => {
         onCheckout={handleCheckout}
       />
       
-      <PaymentModal
-        isOpen={isPaymentOpen}
-        onClose={() => setIsPaymentOpen(false)}
-        totalAmount={getTotalAmount()}
-        onPaymentSuccess={handlePaymentSuccess}
+      <AuthModal
+        isOpen={isAuthOpen}
+        onClose={() => setIsAuthOpen(false)}
+        onSuccess={handleAuthSuccess}
+        mode={authMode}
+        onModeChange={setAuthMode}
+      />
+      
+      <CheckoutModal
+        isOpen={isCheckoutOpen}
+        onClose={() => setIsCheckoutOpen(false)}
+        cartItems={cartItems}
+        onOrderSuccess={handleOrderSuccess}
       />
     </div>
   )

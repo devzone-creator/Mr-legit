@@ -5,13 +5,15 @@ import Header from '../components/Header'
 import Footer from '../components/Footer'
 import SearchModal from '../components/SearchModal'
 import CartSidebar from '../components/CartSidebar'
-import PaymentModal from '../components/PaymentModal'
+import AuthModal from '../components/AuthModal'
+import CheckoutModal from '../components/CheckoutModal'
+import { getCurrentUser, User } from '../lib/auth'
 
 interface Product {
   id: string
   name: string
   description: string | null
-  price: number
+  price: number | null
   original_price: number | null
   category: string | null
   brand: string | null
@@ -44,8 +46,11 @@ const ProductsPage = () => {
   const [activeCategory, setActiveCategory] = useState<string>('all')
   const [isSearchOpen, setIsSearchOpen] = useState(false)
   const [isCartOpen, setIsCartOpen] = useState(false)
-  const [isPaymentOpen, setIsPaymentOpen] = useState(false)
+  const [isAuthOpen, setIsAuthOpen] = useState(false)
+  const [isCheckoutOpen, setIsCheckoutOpen] = useState(false)
+  const [authMode, setAuthMode] = useState<'signin' | 'signup'>('signin')
   const [cartItems, setCartItems] = useState<CartItem[]>([])
+  const [user, setUser] = useState<User | null>(null)
 
   const categories = [
     { id: 'all', name: 'All Products' },
@@ -55,8 +60,18 @@ const ProductsPage = () => {
   ]
 
   useEffect(() => {
+    loadUser()
     fetchProducts()
   }, [activeCategory])
+
+  const loadUser = async () => {
+    try {
+      const currentUser = await getCurrentUser()
+      setUser(currentUser)
+    } catch (error) {
+      console.error('Error loading user:', error)
+    }
+  }
 
   const fetchProducts = async () => {
     setLoading(true)
@@ -104,7 +119,7 @@ const ProductsPage = () => {
       const newItem: CartItem = {
         id: product.id,
         name: product.name,
-        price: product.price,
+        price: product.price || 0,
         image_url: product.image_url,
         quantity: 1,
         selectedColor,
@@ -125,21 +140,26 @@ const ProductsPage = () => {
   }
 
   const handleCheckout = () => {
+    if (!user) {
+      setIsCartOpen(false)
+      setAuthMode('signin')
+      setIsAuthOpen(true)
+      return
+    }
     setIsCartOpen(false)
-    setIsPaymentOpen(true)
+    setIsCheckoutOpen(true)
   }
 
-  const handlePaymentSuccess = () => {
+  const handleOrderSuccess = () => {
     setCartItems([])
-    alert('Payment successful! Your order has been placed.')
+  }
+
+  const handleAuthSuccess = () => {
+    loadUser()
   }
 
   const getTotalCartItems = () => {
     return cartItems.reduce((total, item) => total + item.quantity, 0)
-  }
-
-  const getTotalAmount = () => {
-    return cartItems.reduce((total, item) => total + (item.price * item.quantity), 0)
   }
 
   const formatPrice = (price: number | null) => {
@@ -151,7 +171,10 @@ const ProductsPage = () => {
       <Header 
         onSearchToggle={() => setIsSearchOpen(true)}
         onCartToggle={() => setIsCartOpen(true)}
+        onAuthToggle={() => setIsAuthOpen(true)}
         cartItemsCount={getTotalCartItems()}
+        user={user}
+        onSignOut={loadUser}
       />
       
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -262,7 +285,7 @@ const ProductsPage = () => {
                       <span className="text-lg font-bold text-gray-900">
                         {formatPrice(product.price)}
                       </span>
-                      {product.original_price && product.original_price > product.price && (
+                      {product.original_price && product.original_price > (product.price || 0) && (
                         <span className="text-sm text-gray-500 line-through">
                           {formatPrice(product.original_price)}
                         </span>
@@ -298,11 +321,19 @@ const ProductsPage = () => {
         onCheckout={handleCheckout}
       />
       
-      <PaymentModal
-        isOpen={isPaymentOpen}
-        onClose={() => setIsPaymentOpen(false)}
-        totalAmount={getTotalAmount()}
-        onPaymentSuccess={handlePaymentSuccess}
+      <AuthModal
+        isOpen={isAuthOpen}
+        onClose={() => setIsAuthOpen(false)}
+        onSuccess={handleAuthSuccess}
+        mode={authMode}
+        onModeChange={setAuthMode}
+      />
+      
+      <CheckoutModal
+        isOpen={isCheckoutOpen}
+        onClose={() => setIsCheckoutOpen(false)}
+        cartItems={cartItems}
+        onOrderSuccess={handleOrderSuccess}
       />
     </div>
   )
