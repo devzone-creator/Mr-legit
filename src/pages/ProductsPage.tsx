@@ -142,8 +142,8 @@ const ProductsPage = () => {
     return cartItems.reduce((total, item) => total + (item.price * item.quantity), 0)
   }
 
-  const formatPrice = (price: number) => {
-    return `₵${price.toFixed(2)}`
+  const formatPrice = (price: number | null) => {
+    return `₵${(price ?? 0).toFixed(2)}`
   }
 
   return (
