@@ -7,7 +7,7 @@ interface Product {
   id: string
   name: string
   description: string | null
-  price: number
+  price: number | null
   original_price: number | null
   category: string | null
   brand: string | null
@@ -212,8 +212,8 @@ const AdminPage = () => {
     )
   }
 
-  const formatPrice = (price: number) => {
-    return `₵${price.toFixed(2)}`
+  const formatPrice = (price: number | null) => {
+    return `₵${(price ?? 0).toFixed(2)}`
   }
 
   const formatDate = (dateString: string) => {
@@ -448,7 +448,7 @@ const AdminPage = () => {
                         #{order.id.slice(0, 8)}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {formatPrice(order.total_amount || 0)}
+                        {formatPrice(order.total_amount)}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <select
