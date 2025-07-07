@@ -9,18 +9,12 @@ const categories = [
   },
   {
     id: 2,
-    name: 'Traditional Wear',
-    image: 'https://images.pexels.com/photos/1040881/pexels-photo-1040881.jpeg?auto=compress&cs=tinysrgb&w=400',
-    count: '80+ items'
-  },
-  {
-    id: 3,
     name: 'iPhone Accessories',
     image: 'https://images.pexels.com/photos/788946/pexels-photo-788946.jpeg?auto=compress&cs=tinysrgb&w=400',
     count: '150+ items'
   },
   {
-    id: 4,
+    id: 3,
     name: 'Sale Items',
     image: 'https://images.pexels.com/photos/1927259/pexels-photo-1927259.jpeg?auto=compress&cs=tinysrgb&w=400',
     count: '50+ items'
@@ -40,7 +34,7 @@ const Categories = () => {
           </p>
         </div>
         
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {categories.map((category) => (
             <div
               key={category.id}

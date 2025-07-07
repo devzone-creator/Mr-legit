@@ -44,7 +44,6 @@ const Footer = () => {
             <h4 className="text-lg font-semibold mb-4">Categories</h4>
             <ul className="space-y-2">
               <li><a href="#" className="text-gray-400 hover:text-white transition-colors">Men's Fashion</a></li>
-              <li><a href="#" className="text-gray-400 hover:text-white transition-colors">Traditional Wear</a></li>
               <li><a href="#" className="text-gray-400 hover:text-white transition-colors">iPhone Accessories</a></li>
               <li><a href="#" className="text-gray-400 hover:text-white transition-colors">Sale Items</a></li>
             </ul>
