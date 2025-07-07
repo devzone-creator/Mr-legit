@@ -9,21 +9,21 @@ const categories = [
   },
   {
     id: 2,
-    name: 'Women\'s Fashion',
-    image: 'https://images.pexels.com/photos/1040945/pexels-photo-1040945.jpeg?auto=compress&cs=tinysrgb&w=400',
-    count: '200+ items'
-  },
-  {
-    id: 3,
     name: 'Traditional Wear',
     image: 'https://images.pexels.com/photos/1040881/pexels-photo-1040881.jpeg?auto=compress&cs=tinysrgb&w=400',
     count: '80+ items'
   },
   {
-    id: 4,
-    name: 'Accessories',
-    image: 'https://images.pexels.com/photos/1927259/pexels-photo-1927259.jpeg?auto=compress&cs=tinysrgb&w=400',
+    id: 3,
+    name: 'iPhone Accessories',
+    image: 'https://images.pexels.com/photos/788946/pexels-photo-788946.jpeg?auto=compress&cs=tinysrgb&w=400',
     count: '150+ items'
+  },
+  {
+    id: 4,
+    name: 'Sale Items',
+    image: 'https://images.pexels.com/photos/1927259/pexels-photo-1927259.jpeg?auto=compress&cs=tinysrgb&w=400',
+    count: '50+ items'
   }
 ]
 

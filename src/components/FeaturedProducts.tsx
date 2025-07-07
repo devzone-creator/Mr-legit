@@ -13,9 +13,15 @@ interface Product {
   discount: number
   is_new: boolean
   brand: string | null
+  colors: string[] | null
+  sizes: string[] | null
 }
 
-const FeaturedProducts = () => {
+interface FeaturedProductsProps {
+  onAddToCart: (product: Product, selectedColor?: string, selectedSize?: string) => void
+}
+
+const FeaturedProducts = ({ onAddToCart }: FeaturedProductsProps) => {
   const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -45,6 +51,12 @@ const FeaturedProducts = () => {
     return `₵${price.toFixed(2)}`
   }
 
+  const handleAddToCart = (product: Product) => {
+    const defaultColor = product.colors?.[0] || undefined
+    const defaultSize = product.sizes?.[0] || undefined
+    onAddToCart(product, defaultColor, defaultSize)
+  }
+
   if (loading) {
     return (
       <section className="py-16 bg-gray-50">
@@ -66,7 +78,7 @@ const FeaturedProducts = () => {
             Featured Products
           </h2>
           <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-            Handpicked items that represent the best of Ghanaian fashion
+            Handpicked items that represent the best of Ghanaian fashion and premium iPhone accessories
           </p>
         </div>
         
@@ -99,7 +111,10 @@ const FeaturedProducts = () => {
                   <button className="bg-white p-2 rounded-full shadow-md hover:bg-gray-50 transition-colors">
                     <Heart className="w-4 h-4 text-gray-600" />
                   </button>
-                  <button className="bg-white p-2 rounded-full shadow-md hover:bg-gray-50 transition-colors">
+                  <button 
+                    className="bg-white p-2 rounded-full shadow-md hover:bg-gray-50 transition-colors"
+                    onClick={() => handleAddToCart(product)}
+                  >
                     <ShoppingBag className="w-4 h-4 text-gray-600" />
                   </button>
                 </div>

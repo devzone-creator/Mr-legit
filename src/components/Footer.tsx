@@ -12,7 +12,7 @@ const Footer = () => {
               Mr. <span className="text-primary-400">Legit</span>
             </h3>
             <p className="text-gray-400 mb-6">
-              Ghana's premier fashion destination, bringing you the latest trends and timeless classics.
+              Ghana's premier fashion destination for men's fashion and premium iPhone accessories.
             </p>
             <div className="flex space-x-4">
               <a href="#" className="text-gray-400 hover:text-white transition-colors">
@@ -44,9 +44,8 @@ const Footer = () => {
             <h4 className="text-lg font-semibold mb-4">Categories</h4>
             <ul className="space-y-2">
               <li><a href="#" className="text-gray-400 hover:text-white transition-colors">Men's Fashion</a></li>
-              <li><a href="#" className="text-gray-400 hover:text-white transition-colors">Women's Fashion</a></li>
               <li><a href="#" className="text-gray-400 hover:text-white transition-colors">Traditional Wear</a></li>
-              <li><a href="#" className="text-gray-400 hover:text-white transition-colors">Accessories</a></li>
+              <li><a href="#" className="text-gray-400 hover:text-white transition-colors">iPhone Accessories</a></li>
               <li><a href="#" className="text-gray-400 hover:text-white transition-colors">Sale Items</a></li>
             </ul>
           </div>

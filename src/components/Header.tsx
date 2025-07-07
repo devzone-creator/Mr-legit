@@ -1,7 +1,13 @@
 import React, { useState } from 'react'
 import { Search, ShoppingBag, Heart, User, Menu, X } from 'lucide-react'
 
-const Header = () => {
+interface HeaderProps {
+  onSearchToggle: () => void
+  onCartToggle: () => void
+  cartItemsCount: number
+}
+
+const Header = ({ onSearchToggle, onCartToggle, cartItemsCount }: HeaderProps) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
 
   return (
@@ -21,13 +27,13 @@ const Header = () => {
               Home
             </a>
             <a href="#" className="text-gray-700 hover:text-primary-600 font-medium transition-colors">
-              Men
+              Men's Fashion
             </a>
             <a href="#" className="text-gray-700 hover:text-primary-600 font-medium transition-colors">
-              Women
+              Traditional Wear
             </a>
             <a href="#" className="text-gray-700 hover:text-primary-600 font-medium transition-colors">
-              Accessories
+              iPhone Accessories
             </a>
             <a href="#" className="text-gray-700 hover:text-primary-600 font-medium transition-colors">
               Sale
@@ -42,20 +48,32 @@ const Header = () => {
                 type="text"
                 placeholder="Search products..."
                 className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                onClick={onSearchToggle}
               />
             </div>
           </div>
 
           {/* Action Icons */}
           <div className="flex items-center space-x-4">
+            <button 
+              className="md:hidden p-2 text-gray-700 hover:text-primary-600 transition-colors"
+              onClick={onSearchToggle}
+            >
+              <Search className="w-5 h-5" />
+            </button>
             <button className="p-2 text-gray-700 hover:text-primary-600 transition-colors">
               <Heart className="w-5 h-5" />
             </button>
-            <button className="p-2 text-gray-700 hover:text-primary-600 transition-colors relative">
+            <button 
+              className="p-2 text-gray-700 hover:text-primary-600 transition-colors relative"
+              onClick={onCartToggle}
+            >
               <ShoppingBag className="w-5 h-5" />
-              <span className="absolute -top-1 -right-1 bg-primary-600 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                3
-              </span>
+              {cartItemsCount > 0 && (
+                <span className="absolute -top-1 -right-1 bg-primary-600 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                  {cartItemsCount}
+                </span>
+              )}
             </button>
             <button className="p-2 text-gray-700 hover:text-primary-600 transition-colors">
               <User className="w-5 h-5" />
@@ -75,26 +93,18 @@ const Header = () => {
         {isMenuOpen && (
           <div className="md:hidden py-4 border-t border-gray-200">
             <div className="flex flex-col space-y-4">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                <input
-                  type="text"
-                  placeholder="Search products..."
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                />
-              </div>
               <nav className="flex flex-col space-y-2">
                 <a href="#" className="text-gray-700 hover:text-primary-600 font-medium py-2">
                   Home
                 </a>
                 <a href="#" className="text-gray-700 hover:text-primary-600 font-medium py-2">
-                  Men
+                  Men's Fashion
                 </a>
                 <a href="#" className="text-gray-700 hover:text-primary-600 font-medium py-2">
-                  Women
+                  Traditional Wear
                 </a>
                 <a href="#" className="text-gray-700 hover:text-primary-600 font-medium py-2">
-                  Accessories
+                  iPhone Accessories
                 </a>
                 <a href="#" className="text-gray-700 hover:text-primary-600 font-medium py-2">
                   Sale
