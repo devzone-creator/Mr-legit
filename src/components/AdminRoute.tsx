@@ -46,7 +46,7 @@ const AdminRoute = ({ children }: AdminRouteProps) => {
               To access the admin panel, you need an admin account. 
             </p>
             <ol className="text-sm text-blue-700 text-left space-y-1">
-              <li>1. Sign up with email: <code className="bg-blue-100 px-1 rounded">admin@mrlegit.gh</code></li>
+              <li>1. Sign up with email: <code className="bg-blue-100 px-1 rounded">admin@example.com</code></li>
               <li>2. Use any password (minimum 6 characters)</li>
               <li>3. The system will automatically make this user an admin</li>
             </ol>

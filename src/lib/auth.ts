@@ -13,7 +13,7 @@ export interface User {
 
 export const signUp = async (email: string, password: string, fullName: string) => {
   // Check if this is the admin email and auto-assign admin role
-  const isAdminEmail = email === 'admin@mrlegit.gh'
+  const isAdminEmail = email === 'admin@example.com'
   
   const { data, error } = await supabase.auth.signUp({
     email,
