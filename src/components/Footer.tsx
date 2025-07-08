@@ -69,7 +69,6 @@ const AdminRoute = ({ children }: AdminRouteProps) => {
           </Link>
         </div>
       </div>
-      </div>
     )
   }
 
