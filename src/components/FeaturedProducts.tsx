@@ -19,9 +19,10 @@ interface Product {
 
 interface FeaturedProductsProps {
   onAddToCart: (product: Product, selectedColor?: string, selectedSize?: string) => void
+  onAddToWishlist: (product: Product) => void
 }
 
-const FeaturedProducts = ({ onAddToCart }: FeaturedProductsProps) => {
+const FeaturedProducts = ({ onAddToCart, onAddToWishlist }: FeaturedProductsProps) => {
   const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -108,7 +109,10 @@ const FeaturedProducts = ({ onAddToCart }: FeaturedProductsProps) => {
                 
                 {/* Actions */}
                 <div className="absolute top-3 right-3 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                  <button className="bg-white p-2 rounded-full shadow-md hover:bg-gray-50 transition-colors">
+                  <button 
+                    className="bg-white p-2 rounded-full shadow-md hover:bg-gray-50 transition-colors"
+                    onClick={() => onAddToWishlist(product)}
+                  >
                     <Heart className="w-4 h-4 text-gray-600" />
                   </button>
                   <button 

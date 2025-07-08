@@ -7,6 +7,7 @@ import Newsletter from '../components/Newsletter'
 import Footer from '../components/Footer'
 import SearchModal from '../components/SearchModal'
 import CartSidebar from '../components/CartSidebar'
+import WishlistSidebar from '../components/WishlistSidebar'
 import AuthModal from '../components/AuthModal'
 import CheckoutModal from '../components/CheckoutModal'
 import { getCurrentUser, User } from '../lib/auth'
@@ -36,13 +37,23 @@ interface CartItem {
   selectedSize?: string
 }
 
+interface WishlistItem {
+  id: string
+  name: string
+  price: number
+  image_url: string | null
+  brand: string | null
+}
+
 const HomePage = () => {
   const [isSearchOpen, setIsSearchOpen] = useState(false)
   const [isCartOpen, setIsCartOpen] = useState(false)
+  const [isWishlistOpen, setIsWishlistOpen] = useState(false)
   const [isAuthOpen, setIsAuthOpen] = useState(false)
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false)
   const [authMode, setAuthMode] = useState<'signin' | 'signup'>('signin')
   const [cartItems, setCartItems] = useState<CartItem[]>([])
+  const [wishlistItems, setWishlistItems] = useState<WishlistItem[]>([])
   const [user, setUser] = useState<User | null>(null)
 
   useEffect(() => {
@@ -87,6 +98,40 @@ const HomePage = () => {
     }
   }
 
+  const handleAddToWishlist = (product: Product) => {
+    const existingItem = wishlistItems.find(item => item.id === product.id)
+    
+    if (!existingItem) {
+      const newItem: WishlistItem = {
+        id: product.id,
+        name: product.name,
+        price: product.price,
+        image_url: product.image_url,
+        brand: product.brand
+      }
+      setWishlistItems([...wishlistItems, newItem])
+    }
+  }
+
+  const handleRemoveFromWishlist = (id: string) => {
+    setWishlistItems(wishlistItems.filter(item => item.id !== id))
+  }
+
+  const handleAddWishlistToCart = (item: WishlistItem) => {
+    const product: Product = {
+      ...item,
+      original_price: null,
+      rating: 0,
+      review_count: 0,
+      discount: 0,
+      is_new: false,
+      colors: null,
+      sizes: null
+    }
+    handleAddToCart(product)
+    handleRemoveFromWishlist(item.id)
+  }
+
   const handleUpdateQuantity = (id: string, quantity: number) => {
     setCartItems(cartItems.map(item =>
       item.id === id ? { ...item, quantity } : item
@@ -120,19 +165,28 @@ const HomePage = () => {
     return cartItems.reduce((total, item) => total + item.quantity, 0)
   }
 
+  const getTotalWishlistItems = () => {
+    return wishlistItems.length
+  }
+
   return (
     <div className="min-h-screen">
       <Header 
         onSearchToggle={() => setIsSearchOpen(true)}
         onCartToggle={() => setIsCartOpen(true)}
+        onWishlistToggle={() => setIsWishlistOpen(true)}
         onAuthToggle={() => setIsAuthOpen(true)}
         cartItemsCount={getTotalCartItems()}
+        wishlistItemsCount={getTotalWishlistItems()}
         user={user}
         onSignOut={loadUser}
       />
       <Hero />
       <Categories />
-      <FeaturedProducts onAddToCart={handleAddToCart} />
+      <FeaturedProducts 
+        onAddToCart={handleAddToCart}
+        onAddToWishlist={handleAddToWishlist}
+      />
       <Newsletter />
       <Footer />
       
@@ -148,6 +202,14 @@ const HomePage = () => {
         onUpdateQuantity={handleUpdateQuantity}
         onRemoveItem={handleRemoveItem}
         onCheckout={handleCheckout}
+      />
+      
+      <WishlistSidebar
+        isOpen={isWishlistOpen}
+        onClose={() => setIsWishlistOpen(false)}
+        wishlistItems={wishlistItems}
+        onRemoveItem={handleRemoveFromWishlist}
+        onAddToCart={handleAddWishlistToCart}
       />
       
       <AuthModal

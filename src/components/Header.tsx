@@ -1,18 +1,20 @@
 import React, { useState } from 'react'
-import { Search, ShoppingBag, Heart, User, Menu, X, LogOut } from 'lucide-react'
+import { Search, ShoppingBag, Heart, User, Menu, X, LogOut, Bell } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { signOut, User as UserType } from '../lib/auth'
 
 interface HeaderProps {
   onSearchToggle: () => void
   onCartToggle: () => void
+  onWishlistToggle: () => void
   onAuthToggle: () => void
   cartItemsCount: number
+  wishlistItemsCount: number
   user: UserType | null
   onSignOut: () => void
 }
 
-const Header = ({ onSearchToggle, onCartToggle, onAuthToggle, cartItemsCount, user, onSignOut }: HeaderProps) => {
+const Header = ({ onSearchToggle, onCartToggle, onWishlistToggle, onAuthToggle, cartItemsCount, wishlistItemsCount, user, onSignOut }: HeaderProps) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [showUserMenu, setShowUserMenu] = useState(false)
   const navigate = useNavigate()
@@ -75,8 +77,16 @@ const Header = ({ onSearchToggle, onCartToggle, onAuthToggle, cartItemsCount, us
             >
               <Search className="w-5 h-5" />
             </button>
-            <button className="p-2 text-gray-700 hover:text-primary-600 transition-colors">
+            <button 
+              className="p-2 text-gray-700 hover:text-primary-600 transition-colors relative"
+              onClick={onWishlistToggle}
+            >
               <Heart className="w-5 h-5" />
+              {wishlistItemsCount > 0 && (
+                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                  {wishlistItemsCount}
+                </span>
+              )}
             </button>
             <button 
               className="p-2 text-gray-700 hover:text-primary-600 transition-colors relative"
@@ -115,6 +125,16 @@ const Header = ({ onSearchToggle, onCartToggle, onAuthToggle, cartItemsCount, us
                 </div>
               )}
             </div>
+            
+            {/* Admin notification for new orders */}
+            {user?.role === 'admin' && (
+              <button 
+                className="p-2 text-gray-700 hover:text-primary-600 transition-colors relative"
+                onClick={() => navigate('/admin')}
+              >
+                <Bell className="w-5 h-5" />
+              </button>
+            )}
             
             {/* Mobile menu button */}
             <button

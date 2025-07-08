@@ -5,6 +5,7 @@ import Header from '../components/Header'
 import Footer from '../components/Footer'
 import SearchModal from '../components/SearchModal'
 import CartSidebar from '../components/CartSidebar'
+import WishlistSidebar from '../components/WishlistSidebar'
 import AuthModal from '../components/AuthModal'
 import CheckoutModal from '../components/CheckoutModal'
 import { getCurrentUser, User } from '../lib/auth'
@@ -40,16 +41,26 @@ interface CartItem {
   selectedSize?: string
 }
 
+interface WishlistItem {
+  id: string
+  name: string
+  price: number
+  image_url: string | null
+  brand: string | null
+}
+
 const ProductsPage = () => {
   const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
   const [activeCategory, setActiveCategory] = useState<string>('all')
   const [isSearchOpen, setIsSearchOpen] = useState(false)
   const [isCartOpen, setIsCartOpen] = useState(false)
+  const [isWishlistOpen, setIsWishlistOpen] = useState(false)
   const [isAuthOpen, setIsAuthOpen] = useState(false)
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false)
   const [authMode, setAuthMode] = useState<'signin' | 'signup'>('signin')
   const [cartItems, setCartItems] = useState<CartItem[]>([])
+  const [wishlistItems, setWishlistItems] = useState<WishlistItem[]>([])
   const [user, setUser] = useState<User | null>(null)
 
   const categories = [
@@ -98,6 +109,50 @@ const ProductsPage = () => {
     } finally {
       setLoading(false)
     }
+  }
+
+  const handleAddToWishlist = (product: Product) => {
+    const existingItem = wishlistItems.find(item => item.id === product.id)
+    
+    if (!existingItem) {
+      const newItem: WishlistItem = {
+        id: product.id,
+        name: product.name,
+        price: product.price || 0,
+        image_url: product.image_url,
+        brand: product.brand
+      }
+      setWishlistItems([...wishlistItems, newItem])
+    }
+  }
+
+  const handleRemoveFromWishlist = (id: string) => {
+    setWishlistItems(wishlistItems.filter(item => item.id !== id))
+  }
+
+  const handleAddWishlistToCart = (item: WishlistItem) => {
+    const product: Product = {
+      id: item.id,
+      name: item.name,
+      description: null,
+      price: item.price,
+      original_price: null,
+      category: null,
+      brand: item.brand,
+      image_url: item.image_url,
+      images: null,
+      colors: null,
+      sizes: null,
+      is_featured: null,
+      is_new: null,
+      is_active: null,
+      discount: null,
+      rating: 0,
+      review_count: 0,
+      created_at: null
+    }
+    handleAddToCart(product)
+    handleRemoveFromWishlist(item.id)
   }
 
   const handleAddToCart = (product: Product, selectedColor?: string, selectedSize?: string) => {
@@ -162,6 +217,10 @@ const ProductsPage = () => {
     return cartItems.reduce((total, item) => total + item.quantity, 0)
   }
 
+  const getTotalWishlistItems = () => {
+    return wishlistItems.length
+  }
+
   const formatPrice = (price: number | null) => {
     return `₵${(price ?? 0).toFixed(2)}`
   }
@@ -171,8 +230,10 @@ const ProductsPage = () => {
       <Header 
         onSearchToggle={() => setIsSearchOpen(true)}
         onCartToggle={() => setIsCartOpen(true)}
+        onWishlistToggle={() => setIsWishlistOpen(true)}
         onAuthToggle={() => setIsAuthOpen(true)}
         cartItemsCount={getTotalCartItems()}
+        wishlistItemsCount={getTotalWishlistItems()}
         user={user}
         onSignOut={loadUser}
       />
@@ -240,7 +301,10 @@ const ProductsPage = () => {
                   
                   {/* Actions */}
                   <div className="absolute top-3 right-3 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                    <button className="bg-white p-2 rounded-full shadow-md hover:bg-gray-50 transition-colors">
+                    <button 
+                      className="bg-white p-2 rounded-full shadow-md hover:bg-gray-50 transition-colors"
+                      onClick={() => handleAddToWishlist(product)}
+                    >
                       <Heart className="w-4 h-4 text-gray-600" />
                     </button>
                     <button 
@@ -319,6 +383,14 @@ const ProductsPage = () => {
         onUpdateQuantity={handleUpdateQuantity}
         onRemoveItem={handleRemoveItem}
         onCheckout={handleCheckout}
+      />
+      
+      <WishlistSidebar
+        isOpen={isWishlistOpen}
+        onClose={() => setIsWishlistOpen(false)}
+        wishlistItems={wishlistItems}
+        onRemoveItem={handleRemoveFromWishlist}
+        onAddToCart={handleAddWishlistToCart}
       />
       
       <AuthModal
