@@ -13,7 +13,7 @@ export interface User {
 
 export const signUp = async (email: string, password: string, fullName: string, phone?: string, address?: string, city?: string, region?: string) => {
   // Check if this is the admin email and auto-assign admin role
-  const isAdminEmail = email === 'admin@example.com'
+  const isAdminEmail = email === 'admin@mrlegit.gh'
   
   const { data, error } = await supabase.auth.signUp({
     email,
@@ -58,6 +58,43 @@ export const signUp = async (email: string, password: string, fullName: string, 
 }
 
 export const signIn = async (email: string, password: string) => {
+  // For admin user, try to create account if it doesn't exist
+  if (email === 'admin@mrlegit.gh') {
+    try {
+      // First try to sign in
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      })
+      
+      if (error && error.message.includes('Invalid login credentials')) {
+        // If login fails, try to create the admin account
+        console.log('Admin account not found, creating...')
+        await signUp(email, password, 'Admin User', '', '', '', '')
+        
+        // Now try to sign in again
+        const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+          email,
+          password
+        })
+        
+        if (signInError) throw signInError
+        return signInData
+      }
+      
+      if (error) throw error
+      return data
+    } catch (err: any) {
+      if (err.message.includes('Invalid login credentials')) {
+        throw new Error('Invalid email or password. Please check your credentials and try again.')
+      } else if (err.message.includes('Email not confirmed')) {
+        throw new Error('Please check your email and click the verification link before signing in.')
+      } else {
+        throw err
+      }
+    }
+  }
+  
   const { data, error } = await supabase.auth.signInWithPassword({
     email,
     password
