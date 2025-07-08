@@ -13,7 +13,7 @@ export interface User {
 
 export const signUp = async (email: string, password: string, fullName: string, phone?: string, address?: string, city?: string, region?: string) => {
   // Check if this is the admin email and auto-assign admin role
-  const isAdminEmail = email === 'admin@mrlegit.gh'
+  const isAdminEmail = email === 'admin@example.com'
   
   const { data, error } = await supabase.auth.signUp({
     email,
@@ -59,7 +59,7 @@ export const signUp = async (email: string, password: string, fullName: string, 
 
 export const signIn = async (email: string, password: string) => {
   // For admin user, try to create account if it doesn't exist
-  if (email === 'admin@mrlegit.gh') {
+  if (email === 'admin@example.com') {
     try {
       // First try to sign in
       const { data, error } = await supabase.auth.signInWithPassword({

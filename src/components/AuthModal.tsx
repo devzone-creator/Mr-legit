@@ -41,7 +41,7 @@ const AuthModal = ({ isOpen, onClose, onSuccess, mode, onModeChange }: AuthModal
         )
         
         // For admin email, no email verification needed
-        if (formData.email === 'admin@mrlegit.gh') {
+        if (formData.email === 'admin@example.com') {
           alert('Admin account created successfully! You can now sign in.')
         } else {
           alert('Account created successfully! Please check your email to verify your account before signing in.')
