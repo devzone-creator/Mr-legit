@@ -131,8 +131,10 @@ const Header = ({ onSearchToggle, onCartToggle, onWishlistToggle, onAuthToggle, 
               <button 
                 className="p-2 text-gray-700 hover:text-primary-600 transition-colors relative"
                 onClick={() => navigate('/admin')}
+                title="Admin Dashboard"
               >
                 <Bell className="w-5 h-5" />
+                <span className="absolute -bottom-1 -right-1 bg-primary-600 text-white text-xs rounded-full w-3 h-3"></span>
               </button>
             )}
             

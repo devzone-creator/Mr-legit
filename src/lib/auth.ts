@@ -12,17 +12,34 @@ export interface User {
 }
 
 export const signUp = async (email: string, password: string, fullName: string) => {
+  // Check if this is the admin email and auto-assign admin role
+  const isAdminEmail = email === 'admin@mrlegit.gh'
+  
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
     options: {
       data: {
         full_name: fullName,
+        role: isAdminEmail ? 'admin' : 'customer'
       }
     }
   })
   
   if (error) throw error
+  
+  // If this is the admin email, update the profile role after creation
+  if (isAdminEmail && data.user) {
+    try {
+      await supabase
+        .from('profiles')
+        .update({ role: 'admin' })
+        .eq('id', data.user.id)
+    } catch (updateError) {
+      console.error('Error setting admin role:', updateError)
+    }
+  }
+  
   return data
 }
 
