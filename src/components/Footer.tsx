@@ -1,4 +1,5 @@
 import React from 'react'
+import { Link } from 'react-router-dom'
 import { Facebook, Instagram, Twitter, Phone, Mail, MapPin } from 'lucide-react'
 
 const Footer = () => {
@@ -89,6 +90,13 @@ const Footer = () => {
             © 2025 Mr. Legit. All rights reserved.
           </p>
           <div className="flex space-x-6 mt-4 md:mt-0">
+            {/* Development admin link */}
+            <Link 
+              to="/admin" 
+              className="text-gray-400 hover:text-white text-sm transition-colors"
+            >
+              Admin
+            </Link>
             <a href="#" className="text-gray-400 hover:text-white text-sm transition-colors">
               Privacy Policy
             </a>
