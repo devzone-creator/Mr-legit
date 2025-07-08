@@ -90,13 +90,6 @@ const Footer = () => {
             © 2025 Mr. Legit. All rights reserved.
           </p>
           <div className="flex space-x-6 mt-4 md:mt-0">
-              <h3 className="font-medium text-blue-900 mb-2">Quick Admin Access:</h3>
-              <p className="text-sm text-blue-700 mb-2">
-                Email: <code className="bg-blue-100 px-1 rounded">admin@mrlegit.gh</code><br/>
-                Password: <code className="bg-blue-100 px-1 rounded">admin123</code>
-              </p>
-            </div>
-            
             {/* Development admin link */}
             <Link 
               to="/admin" 
@@ -112,7 +105,6 @@ const Footer = () => {
             </a>
           </div>
         </div>
-      </div>
     </footer>
   )
 }
