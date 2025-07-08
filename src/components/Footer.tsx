@@ -27,7 +27,7 @@ const Footer = () => {
               </a>
             </div>
           </div>
-          
+
           {/* Quick Links */}
           <div>
             <h4 className="text-lg font-semibold mb-4">Quick Links</h4>
@@ -39,7 +39,7 @@ const Footer = () => {
               <li><a href="#" className="text-gray-400 hover:text-white transition-colors">Returns</a></li>
             </ul>
           </div>
-          
+
           {/* Categories */}
           <div>
             <h4 className="text-lg font-semibold mb-4">Categories</h4>
@@ -49,7 +49,7 @@ const Footer = () => {
               <li><a href="#" className="text-gray-400 hover:text-white transition-colors">Sale Items</a></li>
             </ul>
           </div>
-          
+
           {/* Contact Info */}
           <div>
             <h4 className="text-lg font-semibold mb-4">Contact Us</h4>
@@ -67,7 +67,7 @@ const Footer = () => {
                 <span className="text-gray-400">hello@mrlegit.gh</span>
               </div>
             </div>
-            
+
             <div className="mt-6">
               <h5 className="font-semibold mb-2">Payment Methods</h5>
               <div className="flex items-center space-x-2">
@@ -84,13 +84,12 @@ const Footer = () => {
             </div>
           </div>
         </div>
-        
+
         <div className="border-t border-gray-800 mt-12 pt-8 flex flex-col md:flex-row justify-between items-center">
           <p className="text-gray-400 text-sm">
             © 2025 Mr. Legit. All rights reserved.
           </p>
           <div className="flex space-x-6 mt-4 md:mt-0">
-            {/* Development admin link */}
             <Link 
               to="/admin" 
               className="text-gray-400 hover:text-white text-sm transition-colors"
@@ -105,10 +104,9 @@ const Footer = () => {
             </a>
           </div>
         </div>
+      </div>
     </footer>
   )
 }
 
-export default Footer
-  )
-}
+export default Footer;
