@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { getCurrentUser, isAdmin } from '../lib/auth'
+import { getCurrentUser, isAdmin as isUserAdmin } from '../lib/auth'
 import { supabase } from '../lib/supabase'
 
 interface AdminRouteProps {
@@ -24,7 +24,7 @@ const AdminRoute = ({ children }: AdminRouteProps) => {
 
   const checkAdminAccess = async () => {
     try {
-      const adminStatus = await isAdmin()
+      const adminStatus = await isUserAdmin()
       setIsAdmin(adminStatus)
     } catch (error) {
       console.error('Error checking admin access:', error)
