@@ -30,13 +30,27 @@ const AuthModal = ({ isOpen, onClose, onSuccess, mode, onModeChange }: AuthModal
 
     try {
       if (mode === 'signup') {
-        await signUp(formData.email, formData.password, formData.fullName)
-        alert('Account created successfully! Please check your email to verify your account.')
+        await signUp(
+          formData.email, 
+          formData.password, 
+          formData.fullName,
+          formData.phone,
+          formData.address,
+          formData.city,
+          formData.region
+        )
+        
+        // For admin email, no email verification needed
+        if (formData.email === 'admin@example.com') {
+          alert('Admin account created successfully! You can now sign in.')
+        } else {
+          alert('Account created successfully! Please check your email to verify your account before signing in.')
+        }
       } else {
         await signIn(formData.email, formData.password)
+        onSuccess()
+        onClose()
       }
-      onSuccess()
-      onClose()
     } catch (err: any) {
       setError(err.message)
     } finally {

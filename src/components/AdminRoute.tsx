@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { getCurrentUser } from '../lib/auth'
+import { getCurrentUser, isAdmin } from '../lib/auth'
+import { supabase } from '../lib/supabase'
 
 interface AdminRouteProps {
   children: React.ReactNode
@@ -12,13 +13,21 @@ const AdminRoute = ({ children }: AdminRouteProps) => {
 
   useEffect(() => {
     checkAdminAccess()
+    
+    // Listen for auth state changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
+      checkAdminAccess()
+    })
+    
+    return () => subscription.unsubscribe()
   }, [])
 
   const checkAdminAccess = async () => {
     try {
-      const user = await getCurrentUser()
-      setIsAdmin(user?.role === 'admin')
+      const adminStatus = await isAdmin()
+      setIsAdmin(adminStatus)
     } catch (error) {
+      console.error('Error checking admin access:', error)
       setIsAdmin(false)
     } finally {
       setLoading(false)
@@ -28,7 +37,7 @@ const AdminRoute = ({ children }: AdminRouteProps) => {
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="loading-spinner"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
       </div>
     )
   }

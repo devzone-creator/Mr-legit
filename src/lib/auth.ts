@@ -11,7 +11,7 @@ export interface User {
   role: string
 }
 
-export const signUp = async (email: string, password: string, fullName: string) => {
+export const signUp = async (email: string, password: string, fullName: string, phone?: string, address?: string, city?: string, region?: string) => {
   // Check if this is the admin email and auto-assign admin role
   const isAdminEmail = email === 'admin@example.com'
   
@@ -19,6 +19,7 @@ export const signUp = async (email: string, password: string, fullName: string) 
     email,
     password,
     options: {
+      emailRedirectTo: window.location.origin,
       data: {
         full_name: fullName,
         role: isAdminEmail ? 'admin' : 'customer'
@@ -28,15 +29,28 @@ export const signUp = async (email: string, password: string, fullName: string) 
   
   if (error) throw error
   
-  // If this is the admin email, update the profile role after creation
-  if (isAdminEmail && data.user) {
+  // Create profile record if user was created successfully
+  if (data.user) {
     try {
-      await supabase
+      const { error: profileError } = await supabase
         .from('profiles')
-        .update({ role: 'admin' })
-        .eq('id', data.user.id)
-    } catch (updateError) {
-      console.error('Error setting admin role:', updateError)
+        .insert({
+          id: data.user.id,
+          full_name: fullName,
+          email: email,
+          phone: phone || null,
+          address: address || null,
+          city: city || null,
+          region: region || null,
+          role: isAdminEmail ? 'admin' : 'customer'
+        })
+      
+      if (profileError) {
+        console.error('Error creating profile:', profileError)
+        // Don't throw here as the user was created successfully in auth
+      }
+    } catch (profileError) {
+      console.error('Error creating profile:', profileError)
     }
   }
   
@@ -49,7 +63,17 @@ export const signIn = async (email: string, password: string) => {
     password
   })
   
-  if (error) throw error
+  if (error) {
+    // Provide more helpful error messages
+    if (error.message.includes('Invalid login credentials')) {
+      throw new Error('Invalid email or password. Please check your credentials and try again.')
+    } else if (error.message.includes('Email not confirmed')) {
+      throw new Error('Please check your email and click the verification link before signing in.')
+    } else {
+      throw error
+    }
+  }
+  
   return data
 }
 
@@ -59,17 +83,52 @@ export const signOut = async () => {
 }
 
 export const getCurrentUser = async (): Promise<User | null> => {
-  const { data: { user } } = await supabase.auth.getUser()
-  
-  if (!user) return null
-  
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('*')
-    .eq('id', user.id)
-    .single()
-  
-  return profile
+  try {
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    
+    if (authError || !user) return null
+    
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', user.id)
+      .single()
+    
+    if (profileError) {
+      console.error('Error fetching profile:', profileError)
+      // If profile doesn't exist, create it
+      if (profileError.code === 'PGRST116') {
+        const { error: insertError } = await supabase
+          .from('profiles')
+          .insert({
+            id: user.id,
+            email: user.email,
+            full_name: user.user_metadata?.full_name || null,
+            role: user.email === 'admin@example.com' ? 'admin' : 'customer'
+          })
+        
+        if (insertError) {
+          console.error('Error creating missing profile:', insertError)
+          return null
+        }
+        
+        // Fetch the newly created profile
+        const { data: newProfile } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', user.id)
+          .single()
+        
+        return newProfile
+      }
+      return null
+    }
+    
+    return profile
+  } catch (error) {
+    console.error('Error in getCurrentUser:', error)
+    return null
+  }
 }
 
 export const updateProfile = async (updates: Partial<User>) => {
@@ -82,4 +141,15 @@ export const updateProfile = async (updates: Partial<User>) => {
     .eq('id', user.id)
   
   if (error) throw error
+}
+
+// Helper function to check if user is admin
+export const isAdmin = async (): Promise<boolean> => {
+  try {
+    const user = await getCurrentUser()
+    return user?.role === 'admin'
+  } catch (error) {
+    console.error('Error checking admin status:', error)
+    return false
+  }
 }
