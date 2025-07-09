@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react'
 import { X, MapPin, Phone, CreditCard, Smartphone } from 'lucide-react'
 import { getCurrentUser, User } from '../lib/auth'
 import { supabase } from '../lib/supabase'
+import { createPaymentIntent, createCustomer } from '../lib/stripe'
+import StripeCheckoutForm from './StripeCheckoutForm'
 
 interface CartItem {
   id: string
@@ -23,9 +25,11 @@ interface CheckoutModalProps {
 const CheckoutModal = ({ isOpen, onClose, cartItems, onOrderSuccess }: CheckoutModalProps) => {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(false)
-  const [paymentMethod, setPaymentMethod] = useState<'momo' | 'card'>('momo')
+  const [paymentMethod, setPaymentMethod] = useState<'stripe' | 'momo'>('stripe')
   const [phoneNumber, setPhoneNumber] = useState('')
   const [deliveryNotes, setDeliveryNotes] = useState('')
+  const [clientSecret, setClientSecret] = useState<string | null>(null)
+  const [paymentStep, setPaymentStep] = useState<'details' | 'payment'>('details')
 
   useEffect(() => {
     if (isOpen) {
@@ -53,10 +57,47 @@ const CheckoutModal = ({ isOpen, onClose, cartItems, onOrderSuccess }: CheckoutM
     return `₵${price.toFixed(2)}`
   }
 
-  const handlePlaceOrder = async () => {
+  const handleProceedToPayment = async () => {
     if (!user) return
 
     setLoading(true)
+    try {
+      const totalAmount = getTotalAmount()
+      
+      if (paymentMethod === 'stripe') {
+        // Create payment intent with Stripe
+        const paymentIntent = await createPaymentIntent(totalAmount, 'usd')
+        setClientSecret(paymentIntent.client_secret)
+        setPaymentStep('payment')
+      } else {
+        // Handle mobile money payment
+        await handleMomoPayment()
+      }
+    } catch (error) {
+      console.error('Error setting up payment:', error)
+      alert('Error setting up payment. Please try again.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleMomoPayment = async () => {
+    // Simulate mobile money payment
+    await new Promise(resolve => setTimeout(resolve, 2000))
+    await completeOrder('momo', `MOMO_${Date.now()}`)
+  }
+
+  const handleStripePaymentSuccess = async (paymentIntent: any) => {
+    await completeOrder('stripe', paymentIntent.id)
+  }
+
+  const handleStripePaymentError = (error: string) => {
+    alert(`Payment failed: ${error}`)
+  }
+
+  const completeOrder = async (method: string, paymentReference: string) => {
+    if (!user) return
+
     try {
       // Create order
       const orderData = {
@@ -65,7 +106,7 @@ const CheckoutModal = ({ isOpen, onClose, cartItems, onOrderSuccess }: CheckoutM
         status: 'pending',
         delivery_address: `${user.address}, ${user.city}, ${user.region}`,
         delivery_notes: deliveryNotes || null,
-        payment_method: paymentMethod,
+        payment_method: method,
         phone_number: phoneNumber
       }
 
@@ -93,17 +134,24 @@ const CheckoutModal = ({ isOpen, onClose, cartItems, onOrderSuccess }: CheckoutM
 
       if (itemsError) throw itemsError
 
-      // Simulate payment processing
-      await new Promise(resolve => setTimeout(resolve, 2000))
-
       // Update order status
       await supabase
         .from('orders')
         .update({ 
           status: 'confirmed',
-          payment_reference: `PAY_${Date.now()}`
+          payment_reference: paymentReference
         })
         .eq('id', order.id)
+
+      // Create Stripe customer if using Stripe
+      if (method === 'stripe') {
+        try {
+          await createCustomer(user.email, user.full_name || undefined)
+        } catch (error) {
+          console.error('Error creating Stripe customer:', error)
+          // Don't fail the order if customer creation fails
+        }
+      }
 
       onOrderSuccess()
       onClose()
@@ -111,8 +159,6 @@ const CheckoutModal = ({ isOpen, onClose, cartItems, onOrderSuccess }: CheckoutM
     } catch (error) {
       console.error('Error placing order:', error)
       alert('Error placing order. Please try again.')
-    } finally {
-      setLoading(false)
     }
   }
 
@@ -132,6 +178,8 @@ const CheckoutModal = ({ isOpen, onClose, cartItems, onOrderSuccess }: CheckoutM
         </div>
 
         <div className="p-6 space-y-6">
+          {paymentStep === 'details' && (
+            <>
           {/* Delivery Information */}
           <div>
             <h3 className="text-lg font-medium text-gray-900 mb-4">Delivery Information</h3>
@@ -203,7 +251,18 @@ const CheckoutModal = ({ isOpen, onClose, cartItems, onOrderSuccess }: CheckoutM
           {/* Payment Method */}
           <div>
             <h3 className="text-lg font-medium text-gray-900 mb-4">Payment Method</h3>
-            <div className="grid grid-cols-2 gap-3 mb-4">
+            <div className="grid grid-cols-2 gap-3 mb-6">
+              <button
+                onClick={() => setPaymentMethod('stripe')}
+                className={`p-3 border rounded-lg flex flex-col items-center space-y-2 ${
+                  paymentMethod === 'stripe'
+                    ? 'border-primary-500 bg-primary-50'
+                    : 'border-gray-200 hover:border-gray-300'
+                }`}
+              >
+                <CreditCard className="w-6 h-6 text-blue-500" />
+                <span className="text-sm font-medium">Card Payment</span>
+              </button>
               <button
                 onClick={() => setPaymentMethod('momo')}
                 className={`p-3 border rounded-lg flex flex-col items-center space-y-2 ${
@@ -214,17 +273,6 @@ const CheckoutModal = ({ isOpen, onClose, cartItems, onOrderSuccess }: CheckoutM
               >
                 <Smartphone className="w-6 h-6 text-orange-500" />
                 <span className="text-sm font-medium">Mobile Money</span>
-              </button>
-              <button
-                onClick={() => setPaymentMethod('card')}
-                className={`p-3 border rounded-lg flex flex-col items-center space-y-2 ${
-                  paymentMethod === 'card'
-                    ? 'border-primary-500 bg-primary-50'
-                    : 'border-gray-200 hover:border-gray-300'
-                }`}
-              >
-                <CreditCard className="w-6 h-6 text-blue-500" />
-                <span className="text-sm font-medium">Card Payment</span>
               </button>
             </div>
 
@@ -247,18 +295,43 @@ const CheckoutModal = ({ isOpen, onClose, cartItems, onOrderSuccess }: CheckoutM
               </div>
             )}
           </div>
+            </>
+          )}
 
+          {paymentStep === 'payment' && paymentMethod === 'stripe' && clientSecret && (
+            <div>
+              <div className="flex items-center mb-6">
+                <button
+                  onClick={() => setPaymentStep('details')}
+                  className="text-primary-600 hover:text-primary-700 text-sm flex items-center"
+                >
+                  ← Back to details
+                </button>
+              </div>
+              
+              <StripeCheckoutForm
+                clientSecret={clientSecret}
+                onPaymentSuccess={handleStripePaymentSuccess}
+                onPaymentError={handleStripePaymentError}
+                totalAmount={getTotalAmount()}
+              />
+            </div>
+          )}
           <button
-            onClick={handlePlaceOrder}
-            disabled={loading || !phoneNumber}
+            onClick={handleProceedToPayment}
+            disabled={loading || (paymentMethod === 'momo' && !phoneNumber)}
             className="w-full btn-primary py-3 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {loading ? 'Processing Order...' : `Place Order - ${formatPrice(getTotalAmount())}`}
+            {loading ? 'Processing...' : 
+             paymentMethod === 'stripe' ? `Proceed to Payment - ${formatPrice(getTotalAmount())}` :
+             `Place Order - ${formatPrice(getTotalAmount())}`}
           </button>
+          )}
         </div>
       </div>
     </div>
   )
 }
 
+          {paymentStep === 'details' && (
 export default CheckoutModal

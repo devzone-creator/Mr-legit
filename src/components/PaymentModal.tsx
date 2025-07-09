@@ -1,5 +1,7 @@
 import React, { useState } from 'react'
 import { X, CreditCard, Smartphone } from 'lucide-react'
+import { createPaymentIntent } from '../lib/stripe'
+import StripeCheckoutForm from './StripeCheckoutForm'
 
 interface PaymentModalProps {
   isOpen: boolean
@@ -9,18 +11,28 @@ interface PaymentModalProps {
 }
 
 const PaymentModal = ({ isOpen, onClose, totalAmount, onPaymentSuccess }: PaymentModalProps) => {
-  const [paymentMethod, setPaymentMethod] = useState<'momo' | 'card'>('momo')
+  const [paymentMethod, setPaymentMethod] = useState<'stripe' | 'momo'>('stripe')
   const [phoneNumber, setPhoneNumber] = useState('')
-  const [cardDetails, setCardDetails] = useState({
-    number: '',
-    expiry: '',
-    cvv: '',
-    name: ''
-  })
   const [loading, setLoading] = useState(false)
+  const [clientSecret, setClientSecret] = useState<string | null>(null)
+  const [showStripeForm, setShowStripeForm] = useState(false)
 
   const formatPrice = (price: number) => {
     return `₵${price.toFixed(2)}`
+  }
+
+  const handleStripePayment = async () => {
+    setLoading(true)
+    try {
+      const paymentIntent = await createPaymentIntent(totalAmount, 'usd')
+      setClientSecret(paymentIntent.client_secret)
+      setShowStripeForm(true)
+    } catch (error) {
+      console.error('Error creating payment intent:', error)
+      alert('Error setting up payment. Please try again.')
+    } finally {
+      setLoading(false)
+    }
   }
 
   const handleMomoPayment = async () => {
@@ -33,14 +45,13 @@ const PaymentModal = ({ isOpen, onClose, totalAmount, onPaymentSuccess }: Paymen
     }, 2000)
   }
 
-  const handleCardPayment = async () => {
-    setLoading(true)
-    // Simulate payment processing
-    setTimeout(() => {
-      setLoading(false)
-      onPaymentSuccess()
-      onClose()
-    }, 2000)
+  const handleStripePaymentSuccess = (paymentIntent: any) => {
+    onPaymentSuccess()
+    onClose()
+  }
+
+  const handleStripePaymentError = (error: string) => {
+    alert(`Payment failed: ${error}`)
   }
 
   if (!isOpen) return null
@@ -72,6 +83,17 @@ const PaymentModal = ({ isOpen, onClose, totalAmount, onPaymentSuccess }: Paymen
           <div className="mb-6">
             <div className="grid grid-cols-2 gap-3">
               <button
+                onClick={() => setPaymentMethod('stripe')}
+                className={`p-3 border rounded-lg flex flex-col items-center space-y-2 ${
+                  paymentMethod === 'stripe'
+                    ? 'border-primary-500 bg-primary-50'
+                    : 'border-gray-200 hover:border-gray-300'
+                }`}
+              >
+                <CreditCard className="w-6 h-6 text-blue-500" />
+                <span className="text-sm font-medium">Card Payment</span>
+              </button>
+              <button
                 onClick={() => setPaymentMethod('momo')}
                 className={`p-3 border rounded-lg flex flex-col items-center space-y-2 ${
                   paymentMethod === 'momo'
@@ -82,21 +104,43 @@ const PaymentModal = ({ isOpen, onClose, totalAmount, onPaymentSuccess }: Paymen
                 <Smartphone className="w-6 h-6 text-orange-500" />
                 <span className="text-sm font-medium">Mobile Money</span>
               </button>
-              <button
-                onClick={() => setPaymentMethod('card')}
-                className={`p-3 border rounded-lg flex flex-col items-center space-y-2 ${
-                  paymentMethod === 'card'
-                    ? 'border-primary-500 bg-primary-50'
-                    : 'border-gray-200 hover:border-gray-300'
-                }`}
-              >
-                <CreditCard className="w-6 h-6 text-blue-500" />
-                <span className="text-sm font-medium">Card Payment</span>
-              </button>
             </div>
           </div>
 
           {/* Payment Forms */}
+          {showStripeForm && clientSecret ? (
+            <div className="space-y-4">
+              <button
+                onClick={() => setShowStripeForm(false)}
+                className="text-primary-600 hover:text-primary-700 text-sm"
+              >
+                ← Back to payment methods
+              </button>
+              <StripeCheckoutForm
+                clientSecret={clientSecret}
+                onPaymentSuccess={handleStripePaymentSuccess}
+                onPaymentError={handleStripePaymentError}
+                totalAmount={totalAmount}
+              />
+            </div>
+          ) : (
+            <>
+          {paymentMethod === 'stripe' && (
+            <div className="space-y-4">
+              <div className="text-sm text-gray-600 bg-blue-50 p-3 rounded-lg">
+                <p className="font-medium text-blue-900 mb-1">Secure Card Payment</p>
+                <p>Your payment will be processed securely through Stripe. We accept all major credit and debit cards.</p>
+              </div>
+              <button
+                onClick={handleStripePayment}
+                disabled={loading}
+                className="w-full btn-primary py-3 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {loading ? 'Setting up payment...' : 'Continue to Card Payment'}
+              </button>
+            </div>
+          )}
+
           {paymentMethod === 'momo' && (
             <div className="space-y-4">
               <div>
@@ -124,66 +168,7 @@ const PaymentModal = ({ isOpen, onClose, totalAmount, onPaymentSuccess }: Paymen
             </div>
           )}
 
-          {paymentMethod === 'card' && (
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Card Number
-                </label>
-                <input
-                  type="text"
-                  value={cardDetails.number}
-                  onChange={(e) => setCardDetails({...cardDetails, number: e.target.value})}
-                  placeholder="1234 5678 9012 3456"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Expiry Date
-                  </label>
-                  <input
-                    type="text"
-                    value={cardDetails.expiry}
-                    onChange={(e) => setCardDetails({...cardDetails, expiry: e.target.value})}
-                    placeholder="MM/YY"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    CVV
-                  </label>
-                  <input
-                    type="text"
-                    value={cardDetails.cvv}
-                    onChange={(e) => setCardDetails({...cardDetails, cvv: e.target.value})}
-                    placeholder="123"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                  />
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Cardholder Name
-                </label>
-                <input
-                  type="text"
-                  value={cardDetails.name}
-                  onChange={(e) => setCardDetails({...cardDetails, name: e.target.value})}
-                  placeholder="John Doe"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                />
-              </div>
-              <button
-                onClick={handleCardPayment}
-                disabled={!cardDetails.number || !cardDetails.expiry || !cardDetails.cvv || !cardDetails.name || loading}
-                className="w-full btn-primary py-3 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {loading ? 'Processing...' : 'Pay with Card'}
-              </button>
-            </div>
+            </>
           )}
         </div>
       </div>
