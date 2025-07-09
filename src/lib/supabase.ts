@@ -7,7 +7,7 @@ if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error('Missing Supabase environment variables. Please check your .env file.')
 }
 
-if (supabaseUrl === 'your_supabase_url_here' || supabaseAnonKey === 'your_supabase_anon_key_here') {
+if (supabaseUrl === 'your_supabase_url_here' || supabaseAnonKey === 'you_supabase_anon_key_here') {
   throw new Error('Please replace the placeholder Supabase credentials in your .env file with actual values from your Supabase project.')
 }
 
