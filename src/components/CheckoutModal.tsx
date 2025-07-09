@@ -180,121 +180,121 @@ const CheckoutModal = ({ isOpen, onClose, cartItems, onOrderSuccess }: CheckoutM
         <div className="p-6 space-y-6">
           {paymentStep === 'details' && (
             <>
-          {/* Delivery Information */}
-          <div>
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Delivery Information</h3>
-            {user && (
-              <div className="bg-gray-50 p-4 rounded-lg space-y-2">
-                <div className="flex items-center">
-                  <MapPin className="w-4 h-4 text-gray-500 mr-2" />
-                  <span className="text-sm text-gray-700">
-                    {user.address}, {user.city}, {user.region}
-                  </span>
-                </div>
-                <div className="flex items-center">
-                  <Phone className="w-4 h-4 text-gray-500 mr-2" />
-                  <span className="text-sm text-gray-700">{user.phone}</span>
-                </div>
-              </div>
-            )}
-            
-            <div className="mt-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Delivery Notes (Optional)
-              </label>
-              <textarea
-                value={deliveryNotes}
-                onChange={(e) => setDeliveryNotes(e.target.value)}
-                placeholder="Any special instructions for delivery..."
-                rows={3}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-              />
-            </div>
-          </div>
-
-          {/* Order Summary */}
-          <div>
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Order Summary</h3>
-            <div className="space-y-3">
-              {cartItems.map((item) => (
-                <div key={`${item.id}-${item.selectedColor}-${item.selectedSize}`} className="flex items-center justify-between">
-                  <div className="flex items-center space-x-3">
-                    <img
-                      src={item.image_url || 'https://images.pexels.com/photos/1040945/pexels-photo-1040945.jpeg?auto=compress&cs=tinysrgb&w=100'}
-                      alt={item.name}
-                      className="w-12 h-12 object-cover rounded-lg"
-                    />
-                    <div>
-                      <h4 className="font-medium text-gray-900 text-sm">{item.name}</h4>
-                      <div className="text-xs text-gray-500">
-                        {item.selectedColor && <span>Color: {item.selectedColor}</span>}
-                        {item.selectedSize && <span className="ml-2">Size: {item.selectedSize}</span>}
-                        <span className="ml-2">Qty: {item.quantity}</span>
-                      </div>
+              {/* Delivery Information */}
+              <div>
+                <h3 className="text-lg font-medium text-gray-900 mb-4">Delivery Information</h3>
+                {user && (
+                  <div className="bg-gray-50 p-4 rounded-lg space-y-2">
+                    <div className="flex items-center">
+                      <MapPin className="w-4 h-4 text-gray-500 mr-2" />
+                      <span className="text-sm text-gray-700">
+                        {user.address}, {user.city}, {user.region}
+                      </span>
+                    </div>
+                    <div className="flex items-center">
+                      <Phone className="w-4 h-4 text-gray-500 mr-2" />
+                      <span className="text-sm text-gray-700">{user.phone}</span>
                     </div>
                   </div>
-                  <span className="font-medium text-gray-900">
-                    {formatPrice(item.price * item.quantity)}
-                  </span>
-                </div>
-              ))}
-            </div>
+                )}
             
-            <div className="border-t border-gray-200 mt-4 pt-4">
-              <div className="flex items-center justify-between text-lg font-semibold">
-                <span>Total:</span>
-                <span>{formatPrice(getTotalAmount())}</span>
+                <div className="mt-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Delivery Notes (Optional)
+                  </label>
+                  <textarea
+                    value={deliveryNotes}
+                    onChange={(e) => setDeliveryNotes(e.target.value)}
+                    placeholder="Any special instructions for delivery..."
+                    rows={3}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  />
+                </div>
               </div>
-            </div>
-          </div>
 
-          {/* Payment Method */}
-          <div>
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Payment Method</h3>
-            <div className="grid grid-cols-2 gap-3 mb-6">
-              <button
-                onClick={() => setPaymentMethod('stripe')}
-                className={`p-3 border rounded-lg flex flex-col items-center space-y-2 ${
-                  paymentMethod === 'stripe'
-                    ? 'border-primary-500 bg-primary-50'
-                    : 'border-gray-200 hover:border-gray-300'
-                }`}
-              >
-                <CreditCard className="w-6 h-6 text-blue-500" />
-                <span className="text-sm font-medium">Card Payment</span>
-              </button>
-              <button
-                onClick={() => setPaymentMethod('momo')}
-                className={`p-3 border rounded-lg flex flex-col items-center space-y-2 ${
-                  paymentMethod === 'momo'
-                    ? 'border-primary-500 bg-primary-50'
-                    : 'border-gray-200 hover:border-gray-300'
-                }`}
-              >
-                <Smartphone className="w-6 h-6 text-orange-500" />
-                <span className="text-sm font-medium">Mobile Money</span>
-              </button>
-            </div>
-
-            {paymentMethod === 'momo' && (
+              {/* Order Summary */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Phone Number for Payment
-                </label>
-                <input
-                  type="tel"
-                  value={phoneNumber}
-                  onChange={(e) => setPhoneNumber(e.target.value)}
-                  placeholder="0XX XXX XXXX"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                  required
-                />
-                <p className="text-xs text-gray-500 mt-1">
-                  You will receive a prompt on this number to complete payment
-                </p>
+                <h3 className="text-lg font-medium text-gray-900 mb-4">Order Summary</h3>
+                <div className="space-y-3">
+                  {cartItems.map((item) => (
+                    <div key={`${item.id}-${item.selectedColor}-${item.selectedSize}`} className="flex items-center justify-between">
+                      <div className="flex items-center space-x-3">
+                        <img
+                          src={item.image_url || 'https://images.pexels.com/photos/1040945/pexels-photo-1040945.jpeg?auto=compress&cs=tinysrgb&w=100'}
+                          alt={item.name}
+                          className="w-12 h-12 object-cover rounded-lg"
+                        />
+                        <div>
+                          <h4 className="font-medium text-gray-900 text-sm">{item.name}</h4>
+                          <div className="text-xs text-gray-500">
+                            {item.selectedColor && <span>Color: {item.selectedColor}</span>}
+                            {item.selectedSize && <span className="ml-2">Size: {item.selectedSize}</span>}
+                            <span className="ml-2">Qty: {item.quantity}</span>
+                          </div>
+                        </div>
+                      </div>
+                      <span className="font-medium text-gray-900">
+                        {formatPrice(item.price * item.quantity)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+            
+                <div className="border-t border-gray-200 mt-4 pt-4">
+                  <div className="flex items-center justify-between text-lg font-semibold">
+                    <span>Total:</span>
+                    <span>{formatPrice(getTotalAmount())}</span>
+                  </div>
+                </div>
               </div>
-            )}
-          </div>
+
+              {/* Payment Method */}
+              <div>
+                <h3 className="text-lg font-medium text-gray-900 mb-4">Payment Method</h3>
+                <div className="grid grid-cols-2 gap-3 mb-6">
+                  <button
+                    onClick={() => setPaymentMethod('stripe')}
+                    className={`p-3 border rounded-lg flex flex-col items-center space-y-2 ${
+                      paymentMethod === 'stripe'
+                        ? 'border-primary-500 bg-primary-50'
+                        : 'border-gray-200 hover:border-gray-300'
+                    }`}
+                  >
+                    <CreditCard className="w-6 h-6 text-blue-500" />
+                    <span className="text-sm font-medium">Card Payment</span>
+                  </button>
+                  <button
+                    onClick={() => setPaymentMethod('momo')}
+                    className={`p-3 border rounded-lg flex flex-col items-center space-y-2 ${
+                      paymentMethod === 'momo'
+                        ? 'border-primary-500 bg-primary-50'
+                        : 'border-gray-200 hover:border-gray-300'
+                    }`}
+                  >
+                    <Smartphone className="w-6 h-6 text-orange-500" />
+                    <span className="text-sm font-medium">Mobile Money</span>
+                  </button>
+                </div>
+
+                {paymentMethod === 'momo' && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Phone Number for Payment
+                    </label>
+                    <input
+                      type="tel"
+                      value={phoneNumber}
+                      onChange={(e) => setPhoneNumber(e.target.value)}
+                      placeholder="0XX XXX XXXX"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                      required
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      You will receive a prompt on this number to complete payment
+                    </p>
+                  </div>
+                )}
+              </div>
             </>
           )}
 
@@ -317,15 +317,17 @@ const CheckoutModal = ({ isOpen, onClose, cartItems, onOrderSuccess }: CheckoutM
               />
             </div>
           )}
-          <button
-            onClick={handleProceedToPayment}
-            disabled={loading || (paymentMethod === 'momo' && !phoneNumber)}
-            className="w-full btn-primary py-3 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {loading ? 'Processing...' : 
-             paymentMethod === 'stripe' ? `Proceed to Payment - ${formatPrice(getTotalAmount())}` :
-             `Place Order - ${formatPrice(getTotalAmount())}`}
-          </button>
+
+          {paymentStep === 'details' && (
+            <button
+              onClick={handleProceedToPayment}
+              disabled={loading || (paymentMethod === 'momo' && !phoneNumber)}
+              className="w-full btn-primary py-3 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {loading ? 'Processing...' : 
+               paymentMethod === 'stripe' ? `Proceed to Payment - ${formatPrice(getTotalAmount())}` :
+               `Place Order - ${formatPrice(getTotalAmount())}`}
+            </button>
           )}
         </div>
       </div>
@@ -333,5 +335,4 @@ const CheckoutModal = ({ isOpen, onClose, cartItems, onOrderSuccess }: CheckoutM
   )
 }
 
-          {paymentStep === 'details' && (
 export default CheckoutModal
