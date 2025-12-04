@@ -1,15 +1,8 @@
 import React, { useState, useEffect } from 'react'
 import { Search, X } from 'lucide-react'
-import { supabase } from '../lib/supabase'
+import { fetchProducts, ApiProduct } from '../lib/api'
 
-interface Product {
-  id: string
-  name: string
-  price: number
-  image_url: string | null
-  brand: string | null
-  category: string | null
-}
+type Product = ApiProduct & { category?: string | null }
 
 interface SearchModalProps {
   isOpen: boolean
@@ -32,15 +25,13 @@ const SearchModal = ({ isOpen, onClose }: SearchModalProps) => {
   const searchProducts = async () => {
     setLoading(true)
     try {
-      const { data, error } = await supabase
-        .from('products')
-        .select('id, name, price, image_url, brand, category')
-        .eq('is_active', true)
-        .or(`name.ilike.%${searchQuery}%,brand.ilike.%${searchQuery}%,category.ilike.%${searchQuery}%`)
-        .limit(10)
-
-      if (error) throw error
-      setSearchResults(data || [])
+      const all = await fetchProducts()
+      const q = searchQuery.toLowerCase()
+      const filtered = all.filter(p =>
+        p.name.toLowerCase().includes(q) ||
+        (p.brand && p.brand.toLowerCase().includes(q))
+      )
+      setSearchResults(filtered.slice(0, 10) as Product[])
     } catch (error) {
       console.error('Error searching products:', error)
     } finally {

@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { X, MapPin, Phone, CreditCard, Smartphone } from 'lucide-react'
-import { getCurrentUser, User } from '../lib/auth'
-import { supabase } from '../lib/supabase'
+import { getCurrentUser, getToken, User } from '../lib/auth'
 import { createPaymentIntent, createCustomer } from '../lib/stripe'
 import StripeCheckoutForm from './StripeCheckoutForm'
 
@@ -27,6 +26,8 @@ const CheckoutModal = ({ isOpen, onClose, cartItems, onOrderSuccess }: CheckoutM
   const [loading, setLoading] = useState(false)
   const [paymentMethod, setPaymentMethod] = useState<'stripe' | 'momo'>('stripe')
   const [phoneNumber, setPhoneNumber] = useState('')
+  const [deliveryAddress, setDeliveryAddress] = useState('')
+  const [deliveryRegion, setDeliveryRegion] = useState<'Northern' | 'Upper East' | 'Upper West' | 'North East' | 'Savannah'>('Northern')
   const [deliveryNotes, setDeliveryNotes] = useState('')
   const [clientSecret, setClientSecret] = useState<string | null>(null)
   const [paymentStep, setPaymentStep] = useState<'details' | 'payment'>('details')
@@ -43,6 +44,9 @@ const CheckoutModal = ({ isOpen, onClose, cartItems, onOrderSuccess }: CheckoutM
       setUser(currentUser)
       if (currentUser?.phone) {
         setPhoneNumber(currentUser.phone)
+      }
+      if (currentUser?.address) {
+        setDeliveryAddress(currentUser.address)
       }
     } catch (error) {
       console.error('Error loading user:', error)
@@ -99,58 +103,44 @@ const CheckoutModal = ({ isOpen, onClose, cartItems, onOrderSuccess }: CheckoutM
     if (!user) return
 
     try {
-      // Create order
-      const orderData = {
-        user_id: user.id,
-        total_amount: getTotalAmount(),
-        status: 'pending',
-        delivery_address: `${user.address}, ${user.city}, ${user.region}`,
-        delivery_notes: deliveryNotes || null,
-        payment_method: method,
-        phone_number: phoneNumber
+      const token = getToken()
+      if (!token) {
+        alert('You need to be signed in to place an order.')
+        return
       }
 
-      const { data: order, error: orderError } = await supabase
-        .from('orders')
-        .insert([orderData])
-        .select()
-        .single()
-
-      if (orderError) throw orderError
-
-      // Create order items
-      const orderItems = cartItems.map(item => ({
-        order_id: order.id,
-        product_id: item.id,
+      const items = cartItems.map(item => ({
+        productId: Number(item.id),
         quantity: item.quantity,
-        price: item.price,
-        selected_color: item.selectedColor || null,
-        selected_size: item.selectedSize || null
+        unitPrice: item.price,
       }))
 
-      const { error: itemsError } = await supabase
-        .from('order_items')
-        .insert(orderItems)
+      if (!phoneNumber || !deliveryAddress || !deliveryRegion) {
+        alert('Please fill in all delivery information (phone, address, and region)')
+        return
+      }
 
-      if (itemsError) throw itemsError
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:4000'}/api/orders`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          items,
+          total: getTotalAmount(),
+          paymentMethod: method,
+          paymentReference,
+          phoneNumber,
+          deliveryAddress,
+          deliveryRegion,
+          deliveryNotes: deliveryNotes || null,
+        }),
+      })
 
-      // Update order status
-      await supabase
-        .from('orders')
-        .update({ 
-          status: 'confirmed',
-          payment_reference: paymentReference
-        })
-        .eq('id', order.id)
-
-      // Create Stripe customer if using Stripe
-      if (method === 'stripe') {
-        try {
-          await createCustomer(user.email, user.full_name || undefined)
-        } catch (error) {
-          console.error('Error creating Stripe customer:', error)
-          // Don't fail the order if customer creation fails
-        }
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}))
+        throw new Error(data.error || 'Failed to place order')
       }
 
       onOrderSuccess()
@@ -183,32 +173,73 @@ const CheckoutModal = ({ isOpen, onClose, cartItems, onOrderSuccess }: CheckoutM
               {/* Delivery Information */}
               <div>
                 <h3 className="text-lg font-medium text-gray-900 mb-4">Delivery Information</h3>
-                {user && (
-                  <div className="bg-gray-50 p-4 rounded-lg space-y-2">
-                    <div className="flex items-center">
-                      <MapPin className="w-4 h-4 text-gray-500 mr-2" />
-                      <span className="text-sm text-gray-700">
-                        {user.address}, {user.city}, {user.region}
-                      </span>
-                    </div>
-                    <div className="flex items-center">
-                      <Phone className="w-4 h-4 text-gray-500 mr-2" />
-                      <span className="text-sm text-gray-700">{user.phone}</span>
-                    </div>
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
+                  <p className="text-sm text-blue-800">
+                    <strong>Delivery Available:</strong> Northern Ghana only (Northern, Upper East, Upper West, North East, Savannah)
+                  </p>
+                </div>
+                
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <Phone className="w-4 h-4 inline mr-2" />
+                      Phone Number *
+                    </label>
+                    <input
+                      type="tel"
+                      value={phoneNumber}
+                      onChange={(e) => setPhoneNumber(e.target.value)}
+                      placeholder="0XX XXX XXXX"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                      required
+                    />
                   </div>
-                )}
-            
-                <div className="mt-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Delivery Notes (Optional)
-                  </label>
-                  <textarea
-                    value={deliveryNotes}
-                    onChange={(e) => setDeliveryNotes(e.target.value)}
-                    placeholder="Any special instructions for delivery..."
-                    rows={3}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                  />
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <MapPin className="w-4 h-4 inline mr-2" />
+                      Delivery Address *
+                    </label>
+                    <input
+                      type="text"
+                      value={deliveryAddress}
+                      onChange={(e) => setDeliveryAddress(e.target.value)}
+                      placeholder="House number, street name, area"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Region *
+                    </label>
+                    <select
+                      value={deliveryRegion}
+                      onChange={(e) => setDeliveryRegion(e.target.value as typeof deliveryRegion)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                      required
+                    >
+                      <option value="Northern">Northern</option>
+                      <option value="Upper East">Upper East</option>
+                      <option value="Upper West">Upper West</option>
+                      <option value="North East">North East</option>
+                      <option value="Savannah">Savannah</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Delivery Notes (Optional)
+                    </label>
+                    <textarea
+                      value={deliveryNotes}
+                      onChange={(e) => setDeliveryNotes(e.target.value)}
+                      placeholder="Any special instructions for delivery..."
+                      rows={3}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                    />
+                  </div>
                 </div>
               </div>
 
@@ -321,7 +352,7 @@ const CheckoutModal = ({ isOpen, onClose, cartItems, onOrderSuccess }: CheckoutM
           {paymentStep === 'details' && (
             <button
               onClick={handleProceedToPayment}
-              disabled={loading || (paymentMethod === 'momo' && !phoneNumber)}
+              disabled={loading || !phoneNumber || !deliveryAddress || !deliveryRegion}
               className="w-full btn-primary py-3 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? 'Processing...' : 

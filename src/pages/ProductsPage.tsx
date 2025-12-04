@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { Heart, Star, ShoppingBag } from 'lucide-react'
-import { supabase } from '../lib/supabase'
+import { fetchProducts, ApiProduct } from '../lib/api'
 import Header from '../components/Header'
 import Footer from '../components/Footer'
 import SearchModal from '../components/SearchModal'
@@ -10,25 +10,8 @@ import AuthModal from '../components/AuthModal'
 import CheckoutModal from '../components/CheckoutModal'
 import { getCurrentUser, User } from '../lib/auth'
 
-interface Product {
-  id: string
-  name: string
-  description: string | null
-  price: number | null
-  original_price: number | null
-  category: string | null
-  brand: string | null
-  image_url: string | null
-  images: string[] | null
-  colors: string[] | null
-  sizes: string[] | null
-  is_featured: boolean | null
-  is_new: boolean | null
-  is_active: boolean | null
-  discount: number | null
-  rating: number
-  review_count: number
-  created_at: string | null
+type Product = ApiProduct & {
+  category?: string | null
 }
 
 interface CartItem {
@@ -72,7 +55,7 @@ const ProductsPage = () => {
 
   useEffect(() => {
     loadUser()
-    fetchProducts()
+    loadProducts()
   }, [activeCategory])
 
   const loadUser = async () => {
@@ -84,28 +67,22 @@ const ProductsPage = () => {
     }
   }
 
-  const fetchProducts = async () => {
+  const loadProducts = async () => {
     setLoading(true)
     try {
-      let query = supabase
-        .from('products')
-        .select('*')
-        .eq('is_active', true)
-
+      const all = await fetchProducts()
+      let filtered = all
       if (activeCategory !== 'all') {
         if (activeCategory === 'sale') {
-          query = query.gt('discount', 0)
+          filtered = all.filter((p) => (p.discount ?? 0) > 0)
         } else {
-          query = query.eq('category', activeCategory)
+          filtered = all.filter((p) => (p as Product).category === activeCategory)
         }
       }
-
-      const { data, error } = await query.order('created_at', { ascending: false })
-
-      if (error) throw error
-      setProducts(data || [])
+      setProducts(filtered as Product[])
     } catch (error) {
       console.error('Error fetching products:', error)
+      setProducts([]) // Set empty array on error to prevent undefined.map
     } finally {
       setLoading(false)
     }

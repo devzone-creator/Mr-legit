@@ -1,65 +1,45 @@
 import React, { useState, useEffect } from 'react'
-import { Plus, Edit, Trash2, Bell, Package, CreditCard, Users, Eye } from 'lucide-react'
-import { supabase } from '../lib/supabase'
+import { Plus, Edit, Trash2, Bell, Package, CreditCard, Users, Eye, X } from 'lucide-react'
 import AdminRoute from '../components/AdminRoute'
+import { fetchProducts, ApiProduct } from '../lib/api'
+import { getToken } from '../lib/auth'
 
-interface Product {
-  id: string
-  name: string
-  description: string | null
-  price: number | null
-  original_price: number | null
-  category: string | null
-  brand: string | null
-  image_url: string | null
-  images: string[] | null
-  colors: string[] | null
-  sizes: string[] | null
-  is_featured: boolean | null
-  is_new: boolean | null
-  is_active: boolean | null
-  discount: number | null
-  rating: number
-  review_count: number
-  created_at: string | null
+type Product = ApiProduct & {
+  category?: string | null
+  is_active?: boolean | null
 }
 
 interface Order {
   id: string
-  user_id: string | null
-  total_amount: number | null
-  status: string | null
-  payment_reference: string | null
-  delivery_address: string | null
-  phone_number: string | null
-  delivery_notes: string | null
-  payment_method: string | null
-  created_at: string | null
-  profiles?: {
-    full_name: string | null
-    email: string | null
-  }
+  total_amount: number
+  status: string
+  created_at: string
+  email?: string
+  full_name?: string
+  phone_number?: string
+  delivery_address?: string
+  delivery_region?: string
+  delivery_notes?: string
+  payment_method?: string
 }
 
 interface OrderItem {
-  id: string
-  product_id: string | null
-  quantity: number | null
-  price: number | null
-  selected_color: string | null
-  selected_size: string | null
-  products?: {
-    name: string
-    image_url: string | null
-  }
+  product_id: number
+  quantity: number
+  unit_price: number
 }
 
 interface Notification {
   id: string
-  type: 'order' | 'payment'
-  message: string
-  timestamp: string
+  order_id: string
   read: boolean
+  created_at: string
+  total_amount: number
+  full_name: string
+  email: string
+  type?: 'order' | 'payment'
+  message?: string
+  timestamp?: string
 }
 
 const AdminPage = () => {
@@ -77,66 +57,47 @@ const AdminPage = () => {
     description: '',
     price: '',
     original_price: '',
-    category: 'mens-fashion',
+    category_slug: 'men-wear' as 'apples' | 'oraimo' | 'men-wear',
     brand: '',
     image_url: '',
     colors: '',
     sizes: '',
-    is_featured: false,
     is_new: false,
     discount: ''
   })
 
   useEffect(() => {
     fetchData()
-    
-    // Set up real-time subscriptions
-    const ordersSubscription = supabase
-      .channel('orders')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'orders' }, (payload) => {
-        const newNotification: Notification = {
-          id: Date.now().toString(),
-          type: 'order',
-          message: `New order #${payload.new.id.slice(0, 8)} - ₵${payload.new.total_amount}`,
-          timestamp: new Date().toISOString(),
-          read: false
-        }
-        setNotifications(prev => [newNotification, ...prev])
-        fetchData()
-      })
-      .subscribe()
-
-    return () => {
-      supabase.removeChannel(ordersSubscription)
-    }
+    fetchNotifications()
+    // Poll for new notifications every 30 seconds
+    const interval = setInterval(() => {
+      fetchNotifications()
+    }, 30000)
+    return () => clearInterval(interval)
   }, [])
 
   const fetchData = async () => {
     setLoading(true)
     try {
-      // Fetch products
-      const { data: productsData, error: productsError } = await supabase
-        .from('products')
-        .select('*')
-        .order('created_at', { ascending: false })
+      const productsData = await fetchProducts()
+      setProducts(productsData as Product[])
 
-      if (productsError) throw productsError
-      setProducts(productsData || [])
-
-      // Fetch orders with user profiles
-      const { data: ordersData, error: ordersError } = await supabase
-        .from('orders')
-        .select(`
-          *,
-          profiles (
-            full_name,
-            email
-          )
-        `)
-        .order('created_at', { ascending: false })
-
-      if (ordersError) throw ordersError
-      setOrders(ordersData || [])
+      const token = getToken()
+      if (!token) {
+        setOrders([])
+      } else {
+        const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:4000'}/api/admin/orders`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        })
+        if (res.ok) {
+          const ordersData: Order[] = await res.json()
+          setOrders(ordersData)
+        } else {
+          setOrders([])
+        }
+      }
 
     } catch (error) {
       console.error('Error fetching data:', error)
@@ -145,49 +106,70 @@ const AdminPage = () => {
     }
   }
 
-  const fetchOrderItems = async (orderId: string) => {
+  const fetchNotifications = async () => {
     try {
-      const { data, error } = await supabase
-        .from('order_items')
-        .select(`
-          *,
-          products (
-            name,
-            image_url
-          )
-        `)
-        .eq('order_id', orderId)
+      const token = getToken()
+      if (!token) return
 
-      if (error) throw error
-      setOrderItems(data || [])
+      const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:4000'}/api/admin/notifications`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+      if (res.ok) {
+        const notificationsData: Notification[] = await res.json()
+        setNotifications(notificationsData.map(n => ({
+          ...n,
+          type: 'order' as const,
+          message: `New order #${n.order_id.slice(0, 8)} from ${n.full_name} - ₵${n.total_amount.toFixed(2)}`,
+          timestamp: n.created_at,
+        })))
+      }
     } catch (error) {
-      console.error('Error fetching order items:', error)
+      console.error('Error fetching notifications:', error)
     }
+  }
+
+  const fetchOrderItems = async (orderId: string) => {
+    console.warn('Order item details not implemented with Neon API yet', orderId)
+    setOrderItems([])
   }
 
   const handleAddProduct = async () => {
     try {
-      const productData = {
-        name: newProduct.name,
-        description: newProduct.description || null,
-        price: parseFloat(newProduct.price),
-        original_price: newProduct.original_price ? parseFloat(newProduct.original_price) : null,
-        category: newProduct.category,
-        brand: newProduct.brand || null,
-        image_url: newProduct.image_url || null,
-        colors: newProduct.colors ? newProduct.colors.split(',').map(c => c.trim()) : null,
-        sizes: newProduct.sizes ? newProduct.sizes.split(',').map(s => s.trim()) : null,
-        is_featured: newProduct.is_featured,
-        is_new: newProduct.is_new,
-        discount: newProduct.discount ? parseInt(newProduct.discount) : 0,
-        is_active: true
+      const token = getToken()
+      if (!token) {
+        alert('You must be logged in to add products')
+        return
       }
 
-      const { error } = await supabase
-        .from('products')
-        .insert([productData])
+      const productData = {
+        name: newProduct.name,
+        description: newProduct.description || undefined,
+        price: parseFloat(newProduct.price),
+        original_price: newProduct.original_price ? parseFloat(newProduct.original_price) : undefined,
+        category_slug: newProduct.category_slug,
+        brand: newProduct.brand || undefined,
+        image_url: newProduct.image_url || undefined,
+        colors: newProduct.colors ? newProduct.colors.split(',').map(c => c.trim()) : undefined,
+        sizes: newProduct.sizes ? newProduct.sizes.split(',').map(s => s.trim()) : undefined,
+        discount: newProduct.discount ? parseInt(newProduct.discount) : 0,
+        is_new: newProduct.is_new,
+      }
 
-      if (error) throw error
+      const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:4000'}/api/admin/products`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(productData),
+      })
+
+      if (!res.ok) {
+        const error = await res.json().catch(() => ({ error: 'Failed to add product' }))
+        throw new Error(error.error || 'Failed to add product')
+      }
 
       setShowAddProduct(false)
       setNewProduct({
@@ -195,12 +177,11 @@ const AdminPage = () => {
         description: '',
         price: '',
         original_price: '',
-        category: 'mens-fashion',
+        category_slug: 'men-wear',
         brand: '',
         image_url: '',
         colors: '',
         sizes: '',
-        is_featured: false,
         is_new: false,
         discount: ''
       })
@@ -208,53 +189,42 @@ const AdminPage = () => {
       alert('Product added successfully!')
     } catch (error) {
       console.error('Error adding product:', error)
-      alert('Error adding product')
+      alert(error instanceof Error ? error.message : 'Error adding product')
     }
   }
 
   const handleDeleteProduct = async (id: string) => {
-    if (confirm('Are you sure you want to delete this product?')) {
-      try {
-        const { error } = await supabase
-          .from('products')
-          .delete()
-          .eq('id', id)
+    if (!confirm('Are you sure you want to delete this product?')) return
 
-        if (error) throw error
-        fetchData()
-        alert('Product deleted successfully!')
-      } catch (error) {
-        console.error('Error deleting product:', error)
-        alert('Error deleting product')
+    try {
+      const token = getToken()
+      if (!token) {
+        alert('You must be logged in to delete products')
+        return
       }
+
+      const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:4000'}/api/admin/products/${id}`, {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+
+      if (!res.ok) {
+        const error = await res.json().catch(() => ({ error: 'Failed to delete product' }))
+        throw new Error(error.error || 'Failed to delete product')
+      }
+
+      fetchData()
+      alert('Product deleted successfully!')
+    } catch (error) {
+      console.error('Error deleting product:', error)
+      alert(error instanceof Error ? error.message : 'Error deleting product')
     }
   }
 
   const handleUpdateOrderStatus = async (orderId: string, newStatus: string) => {
-    try {
-      const { error } = await supabase
-        .from('orders')
-        .update({ status: newStatus })
-        .eq('id', orderId)
-
-      if (error) throw error
-      fetchData()
-      
-      // Add notification for status update
-      const newNotification: Notification = {
-        id: Date.now().toString(),
-        type: 'order',
-        message: `Order #${orderId.slice(0, 8)} status updated to ${newStatus}`,
-        timestamp: new Date().toISOString(),
-        read: false
-      }
-      setNotifications(prev => [newNotification, ...prev])
-      
-      alert('Order status updated successfully!')
-    } catch (error) {
-      console.error('Error updating order:', error)
-      alert('Error updating order status')
-    }
+    alert(`Updating order ${orderId} to ${newStatus} is not yet wired to Neon API.`)
   }
 
   const handleViewOrder = async (order: Order) => {
@@ -262,12 +232,27 @@ const AdminPage = () => {
     await fetchOrderItems(order.id)
   }
 
-  const markNotificationAsRead = (id: string) => {
-    setNotifications(prev => 
-      prev.map(notif => 
-        notif.id === id ? { ...notif, read: true } : notif
-      )
-    )
+  const markNotificationAsRead = async (id: string) => {
+    try {
+      const token = getToken()
+      if (!token) return
+
+      const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:4000'}/api/admin/notifications/${id}/read`, {
+        method: 'PUT',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+      if (res.ok) {
+        setNotifications(prev => 
+          prev.map(notif => 
+            notif.id === id ? { ...notif, read: true } : notif
+          )
+        )
+      }
+    } catch (error) {
+      console.error('Error marking notification as read:', error)
+    }
   }
 
   const formatPrice = (price: number | null) => {
@@ -295,7 +280,31 @@ const AdminPage = () => {
           </div>
         </div>
         
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          {/* Seed Categories Button */}
+          <div className="mb-4">
+            <button
+              onClick={async () => {
+                try {
+                  const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:4000'}/api/admin/seed-categories`, {
+                    method: 'POST',
+                  })
+                  if (res.ok) {
+                    alert('Categories seeded successfully!')
+                  } else {
+                    alert('Failed to seed categories')
+                  }
+                } catch (error) {
+                  console.error('Error seeding categories:', error)
+                  alert('Error seeding categories')
+                }
+              }}
+              className="btn-secondary text-sm"
+            >
+              Seed Categories (Run Once)
+            </button>
+          </div>
+          
           {/* Stats Cards */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
             <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
@@ -505,8 +514,9 @@ const AdminPage = () => {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                           <div>
-                            <div className="font-medium">{order.profiles?.full_name || 'N/A'}</div>
-                            <div className="text-gray-500">{order.profiles?.email}</div>
+                            <div className="font-medium">{order.full_name || 'N/A'}</div>
+                            <div className="text-gray-500">{order.email}</div>
+                            <div className="text-xs text-gray-400 mt-1">{order.phone_number}</div>
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
@@ -519,7 +529,8 @@ const AdminPage = () => {
                             className="text-sm border border-gray-300 rounded px-2 py-1"
                           >
                             <option value="pending">Pending</option>
-                            <option value="confirmed">Confirmed</option>
+                            <option value="paid">Paid</option>
+                            <option value="processing">Processing</option>
                             <option value="shipped">Shipped</option>
                             <option value="delivered">Delivered</option>
                             <option value="cancelled">Cancelled</option>
@@ -631,12 +642,13 @@ const AdminPage = () => {
                       Category
                     </label>
                     <select
-                      value={newProduct.category}
-                      onChange={(e) => setNewProduct({...newProduct, category: e.target.value})}
+                      value={newProduct.category_slug}
+                      onChange={(e) => setNewProduct({...newProduct, category_slug: e.target.value as 'apples' | 'oraimo' | 'men-wear'})}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                     >
-                      <option value="mens-fashion">Men's Fashion</option>
-                      <option value="iphone-accessories">iPhone Accessories</option>
+                      <option value="apples">Apples</option>
+                      <option value="oraimo">Oraimo Accessories</option>
+                      <option value="men-wear">Men Wear</option>
                     </select>
                   </div>
                   
@@ -731,17 +743,7 @@ const AdminPage = () => {
                   </div>
                 </div>
                 
-                <div className="flex items-center space-x-6">
-                  <label className="flex items-center">
-                    <input
-                      type="checkbox"
-                      checked={newProduct.is_featured}
-                      onChange={(e) => setNewProduct({...newProduct, is_featured: e.target.checked})}
-                      className="mr-2"
-                    />
-                    Featured Product
-                  </label>
-                  
+                <div className="flex items-center">
                   <label className="flex items-center">
                     <input
                       type="checkbox"
@@ -793,14 +795,15 @@ const AdminPage = () => {
               <div className="p-6 space-y-6">
                 {/* Customer Info */}
                 <div>
-                  <h4 className="font-medium text-gray-900 mb-2">Customer Information</h4>
+                  <h4 className="font-medium text-gray-900 mb-2">Customer Information & Delivery Details</h4>
                   <div className="bg-gray-50 p-4 rounded-lg space-y-2">
-                    <p><span className="font-medium">Name:</span> {selectedOrder.profiles?.full_name}</p>
-                    <p><span className="font-medium">Email:</span> {selectedOrder.profiles?.email}</p>
-                    <p><span className="font-medium">Phone:</span> {selectedOrder.phone_number}</p>
-                    <p><span className="font-medium">Address:</span> {selectedOrder.delivery_address}</p>
+                    <p><span className="font-medium">Name:</span> {selectedOrder.full_name || 'N/A'}</p>
+                    <p><span className="font-medium">Email:</span> {selectedOrder.email || 'N/A'}</p>
+                    <p><span className="font-medium">Phone:</span> <a href={`tel:${selectedOrder.phone_number}`} className="text-primary-600 hover:underline">{selectedOrder.phone_number || 'N/A'}</a></p>
+                    <p><span className="font-medium">Delivery Address:</span> {selectedOrder.delivery_address || 'N/A'}</p>
+                    <p><span className="font-medium">Delivery Region:</span> {selectedOrder.delivery_region || 'N/A'}</p>
                     {selectedOrder.delivery_notes && (
-                      <p><span className="font-medium">Notes:</span> {selectedOrder.delivery_notes}</p>
+                      <p><span className="font-medium">Delivery Notes:</span> {selectedOrder.delivery_notes}</p>
                     )}
                   </div>
                 </div>

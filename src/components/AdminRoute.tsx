@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { getCurrentUser, isAdmin as isUserAdmin } from '../lib/auth'
-import { supabase } from '../lib/supabase'
+import { isAdmin as isUserAdmin } from '../lib/auth'
 
 interface AdminRouteProps {
   children: React.ReactNode
@@ -13,13 +12,6 @@ const AdminRoute = ({ children }: AdminRouteProps) => {
 
   useEffect(() => {
     checkAdminAccess()
-    
-    // Listen for auth state changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
-      checkAdminAccess()
-    })
-    
-    return () => subscription.unsubscribe()
   }, [])
 
   const checkAdminAccess = async () => {

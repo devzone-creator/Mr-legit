@@ -1,5 +1,3 @@
-import { supabase } from './supabase'
-
 export interface User {
   id: string
   email: string
@@ -11,173 +9,103 @@ export interface User {
   role: string
 }
 
-export const signUp = async (email: string, password: string, fullName: string, phone?: string, address?: string, city?: string, region?: string) => {
-  // Check if this is the admin email and auto-assign admin role
-  const isAdminEmail = email === 'admin@example.com'
-  
-  const { data, error } = await supabase.auth.signUp({
-    email,
-    password,
-    options: {
-      emailRedirectTo: window.location.origin,
-      data: {
-        full_name: fullName,
-        role: isAdminEmail ? 'admin' : 'customer'
-      }
-    }
-  })
-  
-  if (error) throw error
-  
-  // Create profile record if user was created successfully
-  if (data.user) {
-    try {
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .insert({
-          id: data.user.id,
-          full_name: fullName,
-          email: email,
-          phone: phone || null,
-          address: address || null,
-          city: city || null,
-          region: region || null,
-          role: isAdminEmail ? 'admin' : 'customer'
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:4000'
+
+interface AuthResponse {
+  user: {
+    id: string
+    email: string
+    role: string
+  }
+  token: string
+}
+
+const TOKEN_KEY = 'mr_legit_token'
+
+const saveToken = (token: string) => {
+  localStorage.setItem(TOKEN_KEY, token)
+}
+
+export const getToken = (): string | null => {
+  return localStorage.getItem(TOKEN_KEY)
+}
+
+export const clearToken = () => {
+  localStorage.removeItem(TOKEN_KEY)
+}
+
+export const signUp = async (
+  email: string,
+  password: string,
+  fullName: string,
+  _phone?: string,
+  _address?: string,
+  _city?: string,
+  _region?: string
+) => {
+  const res = await fetch(`${API_BASE}/api/auth/register`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, password, full_name: fullName }),
         })
       
-      if (profileError) {
-        console.error('Error creating profile:', profileError)
-        // Don't throw here as the user was created successfully in auth
-      }
-    } catch (profileError) {
-      console.error('Error creating profile:', profileError)
-    }
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}))
+    throw new Error(data.error || 'Failed to sign up')
   }
-  
+
+  const data: AuthResponse = await res.json()
+  saveToken(data.token)
   return data
 }
 
 export const signIn = async (email: string, password: string) => {
-  // For admin user, try to create account if it doesn't exist
-  if (email === 'admin@example.com') {
-    try {
-      // First try to sign in
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password
-      })
-      
-      if (error && error.message.includes('Invalid login credentials')) {
-        // If login fails, try to create the admin account
-        console.log('Admin account not found, creating...')
-        await signUp(email, password, 'Admin User', '', '', '', '')
-        
-        // Now try to sign in again
-        const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
-          email,
-          password
-        })
-        
-        if (signInError) throw signInError
-        return signInData
-      }
-      
-      if (error) throw error
-      return data
-    } catch (err: any) {
-      if (err.message.includes('Invalid login credentials')) {
-        throw new Error('Invalid email or password. Please check your credentials and try again.')
-      } else if (err.message.includes('Email not confirmed')) {
-        throw new Error('Please check your email and click the verification link before signing in.')
-      } else {
-        throw err
-      }
-    }
-  }
-  
-  const { data, error } = await supabase.auth.signInWithPassword({
-    email,
-    password
+  const res = await fetch(`${API_BASE}/api/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, password }),
   })
-  
-  if (error) {
-    // Provide more helpful error messages
-    if (error.message.includes('Invalid login credentials')) {
-      throw new Error('Invalid email or password. Please check your credentials and try again.')
-    } else if (error.message.includes('Email not confirmed')) {
-      throw new Error('Please check your email and click the verification link before signing in.')
-    } else {
-      throw error
-    }
+
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}))
+    throw new Error(data.error || 'Invalid email or password. Please check your credentials and try again.')
   }
   
+  const data: AuthResponse = await res.json()
+  saveToken(data.token)
   return data
 }
 
 export const signOut = async () => {
-  const { error } = await supabase.auth.signOut()
-  if (error) throw error
+  clearToken()
 }
 
 export const getCurrentUser = async (): Promise<User | null> => {
+  const token = getToken()
+  if (!token) return null
+
   try {
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
-    
-    if (authError || !user) return null
-    
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', user.id)
-      .single()
-    
-    if (profileError) {
-      console.error('Error fetching profile:', profileError)
-      // If profile doesn't exist, create it
-      if (profileError.code === 'PGRST116') {
-        const { error: insertError } = await supabase
-          .from('profiles')
-          .insert({
-            id: user.id,
-            email: user.email,
-            full_name: user.user_metadata?.full_name || null,
-            role: user.email === 'admin@example.com' ? 'admin' : 'customer'
-          })
-        
-        if (insertError) {
-          console.error('Error creating missing profile:', insertError)
-          return null
-        }
-        
-        // Fetch the newly created profile
-        const { data: newProfile } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', user.id)
-          .single()
-        
-        return newProfile
+    const payload = JSON.parse(atob(token.split('.')[1]))
+    const user: User = {
+      id: payload.id,
+      email: payload.email,
+      full_name: null,
+      phone: null,
+      address: null,
+      city: null,
+      region: null,
+      role: payload.role,
       }
-      return null
-    }
-    
-    return profile
+    return user
   } catch (error) {
-    console.error('Error in getCurrentUser:', error)
+    console.error('Error decoding token:', error)
+    clearToken()
     return null
   }
 }
 
 export const updateProfile = async (updates: Partial<User>) => {
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) throw new Error('No user logged in')
-  
-  const { error } = await supabase
-    .from('profiles')
-    .update(updates)
-    .eq('id', user.id)
-  
-  if (error) throw error
+  console.warn('updateProfile is not implemented for JWT auth yet', updates)
 }
 
 // Helper function to check if user is admin

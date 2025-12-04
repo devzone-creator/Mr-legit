@@ -1,21 +1,8 @@
 import React, { useState, useEffect } from 'react'
 import { Heart, Star, ShoppingBag } from 'lucide-react'
-import { supabase } from '../lib/supabase'
+import { fetchProducts, ApiProduct } from '../lib/api'
 
-interface Product {
-  id: string
-  name: string
-  price: number
-  original_price: number | null
-  image_url: string | null
-  rating: number
-  review_count: number
-  discount: number
-  is_new: boolean
-  brand: string | null
-  colors: string[] | null
-  sizes: string[] | null
-}
+type Product = ApiProduct
 
 interface FeaturedProductsProps {
   onAddToCart: (product: Product, selectedColor?: string, selectedSize?: string) => void
@@ -32,15 +19,11 @@ const FeaturedProducts = ({ onAddToCart, onAddToWishlist }: FeaturedProductsProp
 
   const fetchFeaturedProducts = async () => {
     try {
-      const { data, error } = await supabase
-        .from('products')
-        .select('*')
-        .eq('is_featured', true)
-        .eq('is_active', true)
-        .limit(8)
-
-      if (error) throw error
-      setProducts(data || [])
+      const all = await fetchProducts()
+      const featured = all
+        .filter((p) => p.discount && p.discount > 0)
+        .slice(0, 8)
+      setProducts(featured)
     } catch (error) {
       console.error('Error fetching products:', error)
     } finally {
