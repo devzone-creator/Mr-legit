@@ -15,7 +15,6 @@ app.use(express.json())
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: { rejectUnauthorized: false },
 })
 
 const JWT_SECRET = process.env.JWT_SECRET
@@ -583,6 +582,3 @@ app.listen(port, () => {
   // eslint-disable-next-line no-console
   console.log(`API listening on http://localhost:${port}`)
 })
-
-
-
